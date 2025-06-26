@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Open Plan{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Open a Plan</h1>
+    <div class="list-group">
+        {% for plan in plans %}
+            <a href="{{ url_for('views.switch_plan', plan_id=plan.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if plan.id == current_user.active_plan_id %}active{% endif %}">
+                {{ plan.name }}
+                {% if plan.id == current_user.active_plan_id %}
+                    <span class="badge badge-light">Active</span>
+                {% endif %}
+            </a>
+        {% else %}
+            <p>You don't have any plans yet. <a href="{{ url_for('onboard.show_form') }}">Create one now!</a></p>
+        {% endfor %}
+    </div>
+    <a href="{{ url_for('onboard.show_form') }}" class="btn btn-primary mt-4"><i class='bx bx-plus'></i> Create a New Plan</a>
+</div>
+{% endblock %}

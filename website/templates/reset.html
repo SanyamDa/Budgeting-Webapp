@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% set hide_sidebar = true %}
+{% block page_class %}login-page{% endblock %}
+{% block title %}Reset Password{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center min-vh-100 py-5">
+  <div class="card glass shadow-lg" style="max-width:420px;width:100%;">
+    <div class="card-body p-4">
+      <h2 class="text-center mb-4">Choose a New Password</h2>
+
+      <form method="POST">
+        <!-- new password -->
+        <div class="form-group mb-3">
+          <label for="password1">New password</label>
+          <div class="input-group custom-input">
+            <div class="input-group-append">
+              <span class="input-group-text"><i class="bx bx-lock"></i></span>
+            </div>
+            <input type="password"
+                   class="form-control border-right-0"
+                   id="password1" name="password1"
+                   placeholder="At least 8 characters"
+                   minlength="8" required>
+          </div>
+        </div>
+
+        <!-- confirm password -->
+        <div class="form-group mb-4">
+          <label for="password2">Repeat password</label>
+          <div class="input-group custom-input">
+            <div class="input-group-append">
+              <span class="input-group-text"><i class="bx bx-lock"></i></span>
+            </div>
+            <input type="password"
+                   class="form-control border-right-0"
+                   id="password2" name="password2"
+                   placeholder="Re-enter the same password"
+                   minlength="8" required>
+          </div>
+        </div>
+
+        <button class="btn btn-primary w-100">Save</button>
+      </form>
+
+      <p class="small text-center mt-3">
+        Remembered it?
+        <a href="{{ url_for('auth.login') }}">Back&nbsp;to&nbsp;login</a>
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

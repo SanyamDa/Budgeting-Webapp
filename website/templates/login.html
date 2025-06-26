@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% set hide_sidebar = true %}
+
+{% block page_class %}login-page{% endblock %}
+
+{% block title %}Login{% endblock %} 
+
+{% block content %} 
+
+<div class="d-flex justify-content-center align-items-center min-vh-100 py-5">
+    <div class="card glass shadow-lg" style="max-width:420px; width:100%;">
+        <div class="card-body p-4">
+            <h2 class="text-center mb-4">Welcome Back</h2>
+
+            <form method="POST">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <div class="input-group custom-input">
+                        <div class="input-group-append">
+                            <span class="input-group-text">
+                                <i class="bx bx-envelope-open"></i>
+                            </span>
+                        </div>
+                        <input 
+                            type="email"
+                            class="form-control border-right-0"
+                            id="email"
+                            name="email"
+                            placeholder="Enter email"
+                        />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-group custom-input">
+                        <div class="input-group-append">
+                            <span class="input-group-text">
+                                <i class='bx bx-lock' ></i> 
+                            </span>
+                        </div>
+                        <input 
+                            type="password"
+                            class="form-control border-right-0"
+                            id="password"
+                            name="password"
+                            placeholder="Enter password"
+                            required>
+                    </div>
+                    <div class="text-right mt-1">
+                        <a href="{{url_for('auth.forgot_password')}}" class="small text-white">Forgot Password?</a>
+                    </div>
+                </div>
+                <button type="submit" class = "btn btn-primary w-100">Login</button>
+            </form>
+            
+            <!-- divider -->
+
+            <div class="d-flex align-items-center my-3"> <!-- full-width line, pure white -->
+                <hr class="flex-grow-1 m-0 text-white opacity-100"
+                    style="border-top:1px solid currentColor;"> <!-- the word OR, also white -->
+                <span class="mx-2 small text-uppercase text-white">or</span> <!-- matching line on the right -->
+                <hr class="flex-grow-1 m-0 text-white opacity-100"
+                    style="border-top:1px solid currentColor;">
+            </div>
+
+            <!-- Google OAuth -->
+
+            <div class="d-flex justify-content-between mb-4">
+                <a class="btn btn-outline-light flex-fill me-2"
+                    href="{{ url_for('auth.google_login') }}">
+                        <img src="{{ url_for('static', filename='images/google.png') }}"
+                            alt="google logo" height="18" class="icon">
+                        Continue with Google
+                </a>
+            </div>
+
+            <p class="small text-center mt-3">
+                Don't have an account?
+                <a href="{{ url_for('auth.signup') }}">Register</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

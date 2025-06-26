@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Disconnect Google{% endblock %}
+
+{% block content %}
+<div class="container mt-5" style="max-width: 600px;">
+    <div class="text-center">
+        <h1 class="h2">Disconnect Google</h1>
+        <p class="text-muted mt-3 mb-4">To disconnect the Google login method, set a password for your account. Use this password to log in every time!</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('views.disconnect_google') }}">
+        <div class="form-group">
+            <label for="password" class="font-weight-bold">Password:</label>
+            <div class="input-group" style="max-width: 400px;">
+                <input type="password" class="form-control" id="password" name="password" required minlength="7">
+                <div class="input-group-append">
+                    <div class="input-group-text">
+                        <input type="checkbox" id="showPassword">
+                        <label class="form-check-label mb-0 ml-2" for="showPassword">Show</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-secondary btn-block" style="background-color: #e9ecef; border-color: #e9ecef; color: #6c757d; font-weight: bold;">Set and Disconnect</button>
+    </form>
+</div>
+{% endblock %}
+
+<!-- REPLACE THE ENTIRE SCRIPT BLOCK WITH THIS: -->
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const showPasswordCheckbox = document.getElementById('showPassword');
+    const passwordInput = document.getElementById('password');
+
+    if (showPasswordCheckbox && passwordInput) {
+        showPasswordCheckbox.addEventListener('change', function() {
+            passwordInput.type = this.checked ? 'text' : 'password';
+        });
+    }
+});
+</script>
+{% endblock %}

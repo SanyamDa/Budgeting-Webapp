@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% set hide_sidebar = true %}
+{% block title %}Getting to know you{% endblock %}
+{% block page_class %}signup-page{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<style>
+  /* wizard arrows */
+  .nav-arrow{
+    font-size:2rem;color:#fff;opacity:.35;cursor:not-allowed;user-select:none;
+    transition:.2s;
+  }
+  .nav-arrow.active{opacity:1;cursor:pointer;}
+  .step-dot{width:10px;height:10px;border-radius:50%;background:#fff;opacity:.25;margin:.15rem;}
+  .step-dot.active{opacity:1;}
+  /* tiny tag for sub-category delete */
+  .pill{background:#e2e8f0;border-radius:1rem;padding:.15rem .65rem;display:inline-flex;align-items:center;margin:.15rem .35rem;}
+  .pill i{cursor:pointer;margin-left:.25rem;color:#dc3545;}
+  .wizard-step{display:none;}
+</style>
+
+<div class="d-flex justify-content-center align-items-center min-vh-100 py-5">
+  <div class="card glass shadow-lg" style="max-width:520px;width:100%;">
+    <div class="card-body p-4">
+
+      <!-- progress dots -->
+      <div class="d-flex justify-content-center mb-3" id="dots"></div>
+
+      <!-- wizard pages -->
+      <form id="wizardForm" method="POST">
+        <div class="wizard-step" data-valid="false">
+          <h4 class="text-center mb-3">What’s your monthly budget / income?</h4>
+          <input type="number" min="0" step="100" name="income" class="form-control mb-3" placeholder="$ e.g. 2500" required>
+        </div>
+
+        <div class="wizard-step" data-valid="true">
+          <h4 class="text-center mb-3">50 • 30 • 20&nbsp;rule</h4>
+          <p class="small">
+            Classic budgeting suggests you keep <strong>50 %</strong> for
+            <strong>needs</strong> <em>(rent, groceries, utilities)</em>,
+            <strong>30 %</strong> for <strong>wants</strong>
+            <em>(dining&nbsp;out, movies, jewelry)</em>, and
+            <strong>20 %</strong> for <strong>savings&nbsp;/ investing</strong>
+            <em>(stocks, mutual funds, FDs, crypto)</em>.
+            You can stick with those numbers or set your own on the next screen.
+          </p>
+        </div>
+
+        <div class="wizard-step" data-valid="false">
+          <h4 class="text-center mb-3">Choose your own ratios</h4>
+          <div class="row text-center">
+            <div class="col-4">
+              <label class="small">Needs %</label>
+              <input type="number" name="needs" value="50" min="0" max="100" class="form-control ratio-input" required>
+            </div>
+            <div class="col-4">
+              <label class="small">Wants %</label>
+              <input type="number" name="wants" value="30" min="0" max="100" class="form-control ratio-input" required>
+            </div>
+            <div class="col-4">
+              <label class="small">Savings %</label>
+              <input type="number" name="savings" value="20" min="0" max="100" class="form-control ratio-input" required>
+            </div>
+          </div>
+          <p class="small text-center mt-2" id="ratioWarn" style="display:none;color:#ffc107;">Ratios must sum to 100 %</p>
+        </div>
+
+        <!-- Needs sub-categories -->
+        <div class="wizard-step" data-valid="false">
+          <h4 class="text-center mb-2">What are your Needs?</h4>
+          <div id="needsBox" class="mb-4"></div>
+          <button type="button" class="btn btn-outline-light w-100" data-target="needs">Add sub-category</button>
+        </div>
+
+        <!-- Wants -->
+        <div class="wizard-step" data-valid="false">
+          <h4 class="text-center mb-2">What are your Wants?</h4>
+          <div id="wantsBox" class="mb-4"></div>
+          <button type="button" class="btn btn-outline-light w-100" data-target="wants">Add sub-category</button>
+        </div>
+
+        <!-- Investments -->
+        <div class="wizard-step" data-valid="false">
+          <h4 class="text-center mb-2">What are you Investing in?</h4>
+          <div id="savingsBox" class="mb-4"></div>
+          <button type="button" class="btn btn-outline-light w-100" data-target="savings">Add sub-category</button>
+        </div>
+
+        <div class="wizard-step" data-valid="false">
+          <h4 class="text-center mb-3">What will you call this plan?</h4>
+          <input type="text"
+            name="plan_name"
+            class="form-control text-center"
+            placeholder="e.g. My Summer Budget"
+            maxlength="64"               
+            required>
+        </div>
+
+        <!-- submit button only on last step -->
+        <button class="btn btn-primary w-100 mt-3 d-none" id="finishBtn">Save & Continue</button>
+      </form>
+
+      <!-- arrows -->
+      <div class="d-flex justify-content-between mt-3">
+        <i class="bi bi-arrow-left-circle nav-arrow" id="prevArrow"></i>
+        <i class="bi bi-arrow-right-circle nav-arrow" id="nextArrow"></i>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  /* helpers */
+  const steps   = [...document.querySelectorAll(".wizard-step")];
+  const dotsBox = document.getElementById("dots");
+  const prevA   = document.getElementById("prevArrow");
+  const nextA   = document.getElementById("nextArrow");
+  const finishB = document.getElementById("finishBtn");
+  let idx = 0;
+
+  /* create dots */
+  steps.forEach((_,i)=>{
+    const d=document.createElement("div");d.className="step-dot";
+    dotsBox.appendChild(d);
+  });
+  const dots = [...document.querySelectorAll(".step-dot")];
+
+  /* set active page */
+  function render(){
+    steps.forEach((s,i)=>s.style.display=i===idx?"block":"none");
+    dots.forEach((d,i)=>d.classList.toggle("active",i===idx));
+    prevA.classList.toggle("active",idx>0);
+    const stepOk = steps[idx].dataset.valid==="true";
+    nextA.classList.toggle("active",stepOk && idx<steps.length-1);
+    finishB.classList.toggle("d-none", idx!==steps.length-1 || !stepOk);
+  }
+  /* validate ratios */
+  const ratioStepIndex = steps.findIndex(s => s.querySelector(".ratio-input"));
+  document.querySelectorAll(".ratio-input").forEach(inp=>{
+    inp.addEventListener("input",()=>{
+      const total=[...document.querySelectorAll(".ratio-input")]
+                   .reduce((t,i)=>t+Number(i.value||0),0);
+      const ok = total===100;
+      document.getElementById("ratioWarn").style.display = ok?"none":"";
+      steps[ratioStepIndex].dataset.valid = ok;
+      render();
+    });
+  });
+
+  /* sub-category add / delete (needs, wants, savings) */
+  document.querySelectorAll("button[data-target]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const tgt = btn.dataset.target+"Box";
+      const box = document.getElementById(tgt);
+      if(box.children.length>=5) return;
+      const name = prompt("Sub-category name?");
+      if(!name) return;
+      const pill = document.createElement("span");
+      pill.className="pill";
+      pill.innerHTML=`<span>${name}
+        <input type="hidden" name="${btn.dataset.target}Sub[]" value="${name}">
+        <i class="bi bi-x"></i></span>`;
+      pill.querySelector("i").onclick = ()=>{ pill.remove(); checkSubs(box); };
+      box.appendChild(pill);
+      checkSubs(box);
+    });
+  });
+  function checkSubs(box){
+    const step = box.closest(".wizard-step");
+    step.dataset.valid = box.children.length>0;
+    render();
+  }
+
+  /* arrow nav */
+  prevA.onclick = ()=>{ if(idx){ idx--; render(); }};
+  nextA.onclick = ()=>{ if(steps[idx].dataset.valid==="true"){ idx++; render(); }};
+
+  /* init */
+  steps[0].querySelector("input").addEventListener("input",
+    e=>{steps[0].dataset.valid = !!e.target.value; render();});
+    const planStep  = steps.find(s => s.querySelector("input[name='plan_name']"));
+    const planInput = planStep.querySelector("input");
+    planInput.addEventListener("input", e=>{
+      planStep.dataset.valid = !!e.target.value.trim();   // require non-empty
+      render();
+});
+render();
+})();
+</script>
+{% endblock %}

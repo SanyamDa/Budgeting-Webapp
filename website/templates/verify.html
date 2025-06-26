@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% set hide_sidebar = true %}
+{% block title %}OTP Verification{% endblock %}
+{% block page_class %}login-page{% endblock %}
+
+{% block content %}
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<style>
+  .otp-card                   { max-width:420px; width:100%; }
+  .otp-input                  { width:52px; height:52px; font-size:1.4rem; text-align:center; }
+  .otp-input:not(:last-child) { margin-right:.35rem; }
+</style>
+
+<div class="d-flex justify-content-center align-items-center min-vh-100 py-5">
+  <div class="card glass shadow otp-card">
+    <div class="card-body p-4 text-center">
+
+      <div class="mb-3">
+        <i class="bi bi-envelope-check-fill" style="font-size:3rem; color:#40a070"></i>
+      </div>
+
+      <h3 class="fw-bold mb-3">OTP Verification</h3>
+
+      <p class="small mb-4">
+        One-Time Password (OTP) has been sent via e-mail to<br>
+        <strong>{{ session.get('pending_user', {}).get('email', 'your&nbsp;email') }}</strong>.<br>
+        Enter the code below to verify.
+      </p>
+
+      <!-- OTP form (AJAX: no page reload) -->
+      <form id="otpForm" autocomplete="off">
+        <div class="d-flex justify-content-center mb-3">
+          {% for _ in range(6) %}
+            <input type="text" inputmode="numeric" maxlength="1"
+                   class="form-control otp-input" required>
+          {% endfor %}
+        </div>
+
+        <!-- hidden input receives concatenated digits -->
+        <input type="hidden" name="code" id="code">
+
+        <!-- countdown / resend area -->
+        <div class="small mb-3" id="countdownWrapper">
+          Resend OTP in <span id="countdown">05:00</span>
+        </div>
+        <button type="button" id="resendBtn" class="btn btn-outline-secondary btn-sm mb-3 d-none">
+          Resend code
+        </button>
+
+        <button type="submit" class="btn btn-primary w-100">Verify OTP</button>
+        <div id="otpError" class="text-danger small mt-2 d-none">
+          Invalid code. Please try again.
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+<!-- countdown + AJAX verification -->
+<script>
+(function () {
+/* ---------- DOM refs ---------- */
+const boxes     = Array.from(document.querySelectorAll(".otp-input"));
+const hidden    = document.getElementById("code");
+const form      = document.getElementById("otpForm");
+const cdSpan    = document.getElementById("countdown");
+const cdWrap    = document.getElementById("countdownWrapper");
+const resendBtn = document.getElementById("resendBtn");
+const errEl     = document.getElementById("otpError");
+
+/* ---------- constants ---------- */
+const TOTAL = 600;                // seconds (5 min)
+const KEY   = "otpExpiry";        // sessionStorage key
+
+/* ---------- expiry timestamp (persistent) ---------- */
+let expiry = +sessionStorage.getItem(KEY) || 0;
+if (!expiry || Date.now() > expiry) {
+  expiry = Date.now() + TOTAL * 1000;
+  sessionStorage.setItem(KEY, expiry);
+}
+
+/* ---------- helpers ---------- */
+const remaining = () => Math.max(0, Math.floor((expiry - Date.now()) / 1000));
+const fmt = t => `${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`;
+
+function renderTime() { cdSpan.textContent = fmt(remaining()); }
+
+/* ---------- input auto advance/backspace ---------- */
+boxes.forEach((box,i) => {
+  box.addEventListener("keyup", e => {
+    if (/^\d$/.test(e.key) && i < boxes.length-1) boxes[i+1].focus();
+    if (e.key==="Backspace" && !box.value && i)   boxes[i-1].focus();
+  });
+});
+
+/* ---------- countdown ---------- */
+let timerId = null;
+
+function showTimer() {
+  cdWrap.classList.remove("d-none");
+  resendBtn.classList.add("d-none");
+}
+function showResend() {
+  cdWrap.classList.add("d-none");
+  resendBtn.classList.remove("d-none");
+}
+
+function tick() {
+  const left = remaining();
+  renderTime();
+  if (left === 0) {
+    clearInterval(timerId);
+    showResend();
+  }
+}
+function startClock() {
+  clearInterval(timerId);
+  renderTime();
+  showTimer();
+  timerId = setInterval(tick, 1000);
+}
+startClock();
+
+/* ---------- resend OTP (button click) ---------- */
+let busy = false;
+async function resendOtp() {
+  if (busy) return;
+  busy = true;
+  try {
+    const r = await fetch("{{ url_for('auth.resend_otp') }}");
+    if (!r.ok) throw new Error();
+    // success → reset 5-min window
+    expiry = Date.now() + TOTAL * 1000;
+    sessionStorage.setItem(KEY, expiry);
+    boxes.forEach(b => b.value = "");
+    boxes[0].focus();
+    errEl.classList.add("d-none");
+    startClock();
+  } catch {
+    alert("Could not resend OTP. Please try again.");
+  } finally {
+    busy = false;
+  }
+}
+resendBtn.addEventListener("click", resendOtp);
+
+/* ---------- AJAX-based OTP verification ---------- */
+form.addEventListener("submit", async e => {
+  e.preventDefault();
+  hidden.value = boxes.map(b => b.value || "").join("");
+  if (hidden.value.length !== 6) return;      
+
+  const fd   = new FormData(form);
+  const resp = await fetch("{{ url_for('auth.verify') }}", {
+    method: "POST",
+    body:   fd,
+    // If you rely on cookies/Flask-Login (you do), always include them:
+    credentials: "same-origin"
+  });
+
+  if (resp.redirected) {
+    clearInterval(timerId);                // stop the countdown
+    sessionStorage.removeItem(KEY);        // don’t resurrect an old timer later
+    window.location.href = resp.url;
+    return;
+  }
+
+  const data = await resp.json();
+  if (data.success) {
+    clearInterval(timerId);
+    sessionStorage.removeItem(KEY);
+    window.location.href = data.redirect_url || "/dashboard";
+  } else {
+    errEl.classList.remove("d-none");
+    boxes.forEach(b => b.value = "");
+    boxes[0].focus();
+  }
+});
+
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Account Settings{% endblock %}
+
+{% block content %}
+<div class="container account-settings-page" style="max-width: 800px;">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center pb-3 mb-4 border-bottom">
+        <h1 class="h2">Account Settings</h1>
+    </div>
+
+    <!-- User Info & First Name -->
+    <div class="mb-5">
+        <div class="d-flex align-items-center mb-4">
+            <span class="mr-3 font-weight-bold">{{ current_user.email }}</span>
+            <a href="/logout">Log Out</a>
+        </div>
+        <div class="card">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="card-title mb-1">First Name</h5>
+                    <p class="card-text text-muted">We use your first name to personalize your experience.</p>
+                    <input type="text" class="form-control mt-3" id="firstName" value="{{ current_user.first_name }}" style="max-width: 300px;">
+                </div>
+                <button class="btn btn-primary" style="background-color: #e9ecef; border-color: #e9ecef; color: #6c757d;">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <hr class="my-5">
+
+    <!-- Login Methods -->
+    <div class="mb-4">
+        <h2 class="h4 mb-3">Login Methods</h2>
+        <!-- Set a Password Section -->
+        <div class="card bg-light mb-4">
+            <div class="card-body text-center">
+                <h5 class="card-title">Set a Password</h5>
+                <p class="card-text text-muted">Optionally set a password to enable an additional login method, or to edit your account email.</p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="email" class="font-weight-bold">Email</label>
+            <input type="email" readonly class="form-control-plaintext" id="email" value="{{ current_user.email }}">
+        </div>
+        <form method="POST" action="{{ url_for('views.set_password') }}">
+            <div class="form-group">
+                <label for="password" class="font-weight-bold">Password:</label>
+                <div class="input-group" style="max-width: 400px;">
+                    <input type="password" class="form-control" id="password" name="password" required minlength="7">
+                    <div class="input-group-append">
+                        <div class="input-group-text">
+                            <input type="checkbox" id="showPassword">
+                            <label class="form-check-label mb-0 ml-2" for="showPassword">Show</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-secondary mb-4">Set Password</button>
+        </form>
+
+        <!-- Social Logins -->
+        <div>
+            <label class="d-block mb-3 font-weight-bold">Google</label>
+            <div class="d-flex align-items-center">
+                <img src="https://img.icons8.com/color/48/000000/google-logo.png" alt="Google" style="width: 24px; height: 24px;" class="mr-3"/>
+                <span>{{ current_user.first_name }}</span>
+                <a href="{{ url_for('views.disconnect_google') }}" class="ml-auto">Disconnect</a>
+            </div>
+        </div>
+    </div>
+
+    <hr class="my-5">
+
+    <!-- Delete Account -->
+    <div class="mb-5">
+        <h2 class="h4 mb-3">Delete Account</h2>
+        <div class="card border-danger">
+            <div class="card-body text-danger d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="card-text mb-2">
+                        Delete your account if you no longer wish to use the app (and want all of your account and plan data <strong>permanently deleted</strong>).
+                    </p>
+                    <p class="card-text mb-0">
+                        Before you can delete your account, you need to <a href="#">set an account password</a>. Your password will be required to confirm deletion.
+                    </p>
+                </div>
+                <button class="btn btn-outline-danger ml-4">Delete<br>Account</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const showPasswordCheckbox = document.getElementById('showPassword');
+    const passwordInput = document.getElementById('password');
+
+    if (showPasswordCheckbox && passwordInput) {
+        showPasswordCheckbox.addEventListener('change', function() {
+            passwordInput.type = this.checked ? 'text' : 'password';
+        });
+    }
+});
+</script>
+{% endblock %}

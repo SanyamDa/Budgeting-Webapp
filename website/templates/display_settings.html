@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title%}Display Settings{% endblock %}
+
+{% block content %}
+<h1 class="h3 my-4 text-gray-800">Display Settings</h1>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Theme</h6>
+    </div> 
+    <div class="card-body">
+        <form method="POST">
+           <div class="row">
+                <!-- Light Theme -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card theme-card {% if current_user.theme == 'light' %}selected{% endif %}">
+                        <img src="{{ url_for('static', filename='images/theme-light.svg') }}" class="card-img-top" alt="Light Theme Preview">
+                        <div class="card-body text-center">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="theme" id="lightTheme" value="light" {% if current_user.theme == 'light' %}checked{% endif %}>
+                                <label class="form-check-label" for="lightTheme">
+                                    Default
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dark Theme -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card theme-card {% if current_user.theme == 'dark' %}selected{% endif %}">
+                        <img src="{{ url_for('static', filename='images/theme-dark.svg') }}" class="card-img-top" alt="Dark Theme Preview">
+                        <div class="card-body text-center">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="theme" id="darkTheme" value="dark" {% if current_user.theme == 'dark' %}checked{% endif %}>
+                                <label class="form-check-label" for="darkTheme">
+                                    Dark
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Theme -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card theme-card {% if current_user.theme == 'system' %}selected{% endif %}">
+                        <img src="{{ url_for('static', filename='images/theme-system.svg') }}" class="card-img-top" alt="System Theme Preview">
+                        <div class="card-body text-center">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="theme" id="systemTheme" value="system" {% if current_user.theme == 'system' %}checked{% endif %}>
+                                <label class="form-check-label" for="systemTheme">
+                                    System
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+           </div>
+           <button type="submit" class="btn btn-primary">Save</button>
+        </form>
+    </div> 
+</div>
+
+<style>
+    .theme-card {
+        cursor : pointer;
+        border: 2px solid #e3e6f0;
+        transition: border-color 0.2s ease-in-out;
+        height:100%
+    }
+
+    .theme-card:hover {
+        border-color: #b1c3f9
+    }
+
+    .theme-card.selected {
+        border-color: #4e73df;
+    }
+
+    .theme-card img {
+        padding: 1rem;
+        background-color: #f8f9fc;
+        border-bottom: 1px solid #e3e6f0;
+    }
+
+</style>
+{% endblock %}
+
+{% block javascript %}
+{{ super() if super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const themeCards = document.querySelectorAll('.theme-card');
+    themeCards.forEach(card => {
+        card.addEventListener('click', function() {
+            // Unselect all cards
+            themeCards.forEach(c => c.classList.remove('selected'));
+            // Select the clicked card
+            this.classList.add('selected');
+            // Check the radio button inside
+            this.querySelector('input[type="radio"]').checked = true;
+        });
+    });
+});
+</script>
+{% endblock %}

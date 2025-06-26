@@ -1,0 +1,78 @@
+[data-theme='dark'] body {
+    background-color: #161625;
+    color: #dcdcdc;
+}
+
+[data-theme='dark'] .bg-white {
+    background-color: #212134 !important;
+}
+
+[data-theme='dark'] .card {
+    background-color: #212134;
+    border: 1px solid #333;
+}
+
+[data-theme='dark'] .text-gray-800, [data-theme='dark'] .text-gray-900 {
+    color: #dcdcdc !important;
+}
+
+[data-theme='dark'] .text-gray-600, [data-theme='dark'] .text-muted {
+    color: #aaa !important;
+}
+
+[data-theme='dark'] .sidebar {
+    background-color: #161625;
+    border-right: 1px solid #333;
+}
+
+[data-theme='dark'] .sidebar .nav-item .nav-link span, [data-theme='dark'] .sidebar .sidebar-brand {
+    color: #dcdcdc;
+}
+
+[data-theme='dark'] .sidebar .nav-item .nav-link i {
+    color: #888;
+}
+
+[data-theme='dark'] .dropdown-menu {
+    background-color: #2a2a40;
+    border: 1px solid #333;
+}
+
+[data-theme='dark'] .dropdown-item {
+    color: #dcdcdc;
+}
+
+[data-theme='dark'] .dropdown-item:hover {
+    background-color: #3a3a52;
+    color: #fff;
+}
+
+[data-theme='dark'] .dropdown-header {
+    color: #aaa;
+}
+
+[data-theme='dark'] .form-control {
+    background-color: #2a2a40;
+    color: #dcdcdc;
+    border: 1px solid #444;
+}
+
+[data-theme='dark'] .form-control:focus {
+    background-color: #2a2a40;
+    color: #dcdcdc;
+    border-color: #4e73df;
+}
+
+[data-theme='dark'] .list-group-item {
+    background-color: #2a2a40;
+    border: 1px solid #333;
+}
+
+[data-theme='dark'] .btn-link {
+    color: #8c9eff;
+}
+
+[data-theme='dark'] .theme-card img {
+    background-color: #2a2a40;
+    border-bottom: 1px solid #444;
+}

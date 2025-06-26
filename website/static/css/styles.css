@@ -1,0 +1,343 @@
+/* ========== global resets ========== */
+html, body{
+  height:100%;
+  margin:0;
+}
+
+/* ===== finance backdrop ===== */
+body.login-page,
+body.signup-page{
+  background: url("/static/images/financeimg.jpg") center / cover no-repeat fixed;
+  /*                    ↑ folder name matches your project */
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Add transition for smooth sidebar collapse */
+#sidebar {
+  transition: width 0.3s ease;
+}
+
+body.with-sidebar {
+  transition: margin-left 0.3s ease;
+}
+
+/* dark navy overlay + slight blur */
+body.login-page::before,
+body.signup-page::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,32,.55); /* 55 % opacity tint */
+  backdrop-filter:blur(2px);
+  z-index:-1;                  /* behind everything */
+}
+
+/* ========== glass-morph card ========== */
+.card.glass{
+  background:rgba(255,255,255,0);      /* frosted glass */
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:.75rem;
+  backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+  box-shadow:0 1px 1px rgba(0,0,0,.05);
+  color:#fff;                            /* white text on dark bg */
+}
+
+/* ========== input group with icon ========== */
+.input-group.custom-input{
+  border:1px solid #ced4da;
+  border-radius:.25rem;
+  display:flex;
+  background:#fff;                       /* white body for contrast */
+}
+
+.input-group.custom-input .input-group-text,
+.input-group.custom-input .form-control{
+  border:none;
+  background:#fff;
+}
+
+.input-group-text{                       /* centres the icon nicely */
+  padding:0 .75rem;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* optional: when the field is focused, add subtle highlight */
+.input-group.custom-input .form-control:focus{
+  box-shadow:none;
+}
+
+/* left menu tweaks */
+#settingsMenu .list-group-item{
+  border:0;border-radius:0;          /* flush list */
+  padding:.65rem 1rem;
+}
+#settingsMenu .list-group-item:hover{
+  background:#f5f5f5;
+}
+#settingsMenu .list-group-item.active{
+  background:#e9ecef;
+  font-weight:600;
+  color:#000;
+}
+
+/* === vertical sidebar === */
+#sidebar{
+  width:287px;          /* adjust to taste */
+  min-height:100vh;
+  position:fixed;       /* stick while scrolling */
+  left:0; top:0;
+  overflow: visible !important; /* This allows the popup to show */
+  z-index: 1040; 
+}
+
+body.with-sidebar{
+  margin-left:287px;     /* same width you gave #sidebar */
+}
+
+/* change the sidebar background */
+#sidebar {
+  background-color: rgb(36, 64, 207) !important;   /* pick any colour you like */
+}
+
+/* existing link styles */
+#sidebar .nav-link {
+  color: #adb5bd;              /* muted grey */
+  transition: background .15s, color .15s;
+}
+#sidebar .nav-link:hover,
+#sidebar .nav-link.active {
+  color: #fff;
+  background: #0520a61a;       /* same hue, 10 % opacity */
+}
+
+/* === pages that have no sidebar (login, signup, etc.) === */
+body.no-sidebar{
+  margin-left:0 !important;   /* undo the 240 px push */
+}
+
+body.auth{                    /* optional shared tweaks */
+  background:#0c0c0d url("/static/images/bg-finance.jpg") center/cover no-repeat;
+}
+
+.logo-img {
+  width: 50px;     /* adjust to taste */
+  height: 50px;    /* keep it square */
+  object-fit: contain;   /* keeps aspect ratio */
+}
+
+.sidebar-header .logo-img{ margin-right:.5rem !important; }
+
+/* Styles for the new Plan Popup Menu */
+.plan-popup {
+    width: 320px; /* Wider than the sidebar */
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    font-size: 0.95rem;
+    padding: 0;
+    margin-top: 10px !important; /* Add some space from the top */
+    z-index: 1050; /* Ensure popup appears above other content */
+}
+
+.plan-popup .trial-notification {
+    background-color: #f0f9eb; /* Light green */
+    color: #4f7c35;
+    padding: 12px 16px;
+    border-bottom: 1px solid #ddd;
+    font-size: 0.9rem;
+}
+
+.plan-popup .trial-notification a {
+    color: #2c5a14;
+    font-weight: bold;
+    text-decoration: underline;
+}
+
+.plan-popup .dropdown-header {
+    font-weight: 600;
+    color: #6c757d;
+    padding: 12px 16px 4px;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.plan-popup .dropdown-item {
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    color: #343a40;
+}
+
+.plan-popup .dropdown-item i {
+    font-size: 1.2rem;
+    margin-right: 12px;
+    width: 20px; /* Align icons */
+    text-align: center;
+    color: #6c757d;
+}
+
+.plan-popup .dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+.plan-popup .dropdown-divider {
+    margin: 8px 0;
+}
+
+
+/* Remove underline from accordion headers on hover */
+.accordion .card-header .btn-link:hover {
+  text-decoration: none;
+}
+
+.subcategory-item .delete-form {
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.subcategory-item:hover .delete-form {
+  visibility: visible;
+  opacity: 1;
+}
+
+.accordion .btn-link:hover,
+.accordion .btn-link:focus {
+  text-decoration: none;
+}
+
+#sidebar {
+  transition: width 0.3s ease-in-out;
+}
+
+#content-wrapper {
+  transition: margin-left 0.3s ease-in-out;
+  flex-grow: 1;
+}
+
+.sidebar-footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  padding: 10px 15px;
+  text-align: right;
+}
+
+#sidebar-toggle {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 24px;
+  transition: color 0.3s;
+}
+
+#sidebar-toggle:hover {
+  color: #fff;
+}
+
+#sidebar-toggle i {
+  transition: transform 0.3s ease-in-out;
+}
+
+/* Collapsed State Styles */
+body.sidebar-collapsed #sidebar {
+  width: 90px;
+}
+
+body.sidebar-collapsed #sidebar .sidebar-header .lh-sm,
+body.sidebar-collapsed #sidebar .nav-link span,
+body.sidebar-collapsed #sidebar .sidebar-text,
+body.sidebar-collapsed #sidebar .email-white {
+    display: none;
+}
+
+body.sidebar-collapsed #sidebar .sidebar-header {
+    justify-content: center !important;
+}
+
+body.sidebar-collapsed #sidebar .logo-img {
+    margin-right: 0 !important;
+}
+
+body.sidebar-collapsed #sidebar .toggle-arrow {
+    display: none;
+}
+
+body.sidebar-collapsed #sidebar .nav-link {
+    justify-content: center;
+}
+
+body.sidebar-collapsed #sidebar .dropdown {
+    display: flex;
+    justify-content: center;
+}
+
+body.sidebar-collapsed.with-sidebar {
+    margin-left: 90px;
+}
+
+body.sidebar-collapsed #sidebar #sidebar-toggle i {
+    transform: rotate(180deg);
+}
+
+/* 1️⃣  suppress Bootstrap's default caret */
+#planDropdown::after {
+  display: none;          /* hides the pseudo-element */
+}
+
+/* 2️⃣  align plan name + arrow on one line */
+#planDropdown {
+  display: flex;          /* name + icon share the row */
+  align-items: center;    /* vertical centring */
+  justify-content: space-between; /* push arrow to the far right */
+}
+
+#planDropdown h5 {
+  margin: 0;              /* remove default heading margin */
+}
+
+#planDropdown .toggle-arrow {
+  margin-left: .25rem;    /* small gap */
+}
+
+/* Account Settings Page Styles */
+.account-settings-page .card {
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.account-settings-page .bg-light {
+  background-color: #f8f9fa !important;
+}
+
+.account-settings-page .btn-primary {
+  background-color: #e9ecef;
+  border-color: #e9ecef;
+  color: #6c757d;
+  font-weight: bold;
+}
+
+.account-settings-page .btn-secondary {
+  background-color: #e9ecef;
+  border-color: #e9ecef;
+  color: #6c757d;
+  font-weight: bold;
+}
+
+.account-settings-page .border-danger {
+  border-color: #f5c6cb !important;
+}
+
+.account-settings-page .btn-outline-danger {
+  background-color: #f8d7da;
+  color: #721c24;
+  border-color: #f5c6cb;
+  font-weight: bold;
+  border-radius: 6px; /* Adjusts the corner rounding */
+  padding: 0.5rem 1rem;
+  line-height: 1.2;
+  text-align: center;
+}

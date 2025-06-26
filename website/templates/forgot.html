@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% set hide_sidebar = true %}
+{% block page_class %}login-page{% endblock %}
+{% block title %}Forgot Password{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center min-vh-100 py-5">
+    <div class="card glass shadow-lg" style="max-width: 420px;width:100%">
+        <div class = "card-body p-4">
+            <h2 class="text-center mb-4">Reset Your Password</h2>
+
+            <form method = "POST">
+                <div class ="form-group mb-3">
+                    <label for="email">Email address</label>
+                    <div class="input-group custom-input">
+                        <div class="input-group-append">
+                            <span class="input-group-text">
+                                <i class="bx bx-envelope-open"></i>
+                            </span>
+                        </div>
+                        <input type="email" 
+                            class="form-control border-right-0" 
+                            id="email" name="email" 
+                            placeholder="Enter the email you used to Login" 
+                            required>
+                    </div>
+                </div>
+                <button class="btn btn-primary w-100 mt-4">Send reset link</button>
+            </form>
+
+            <p class="small text-center mt-3">
+                Remembered your password?
+                <a href="{{ url_for('auth.login') }}">Back&nbsp;to&nbsp;login</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

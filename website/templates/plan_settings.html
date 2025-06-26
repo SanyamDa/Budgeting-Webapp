@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Plan Settings{% endblock %}
+
+{% block content %}
+<h1 class="h3 my-4 text-gray-800">Plan Settings</h1>
+
+<div class="accordion" id="planSettingsAccordion">
+
+  <!-- Plan Name Section -->
+  <div class="card">
+    <div class="card-header" id="headingPlanName">
+      <h2 class="mb-0">
+        <button class="btn btn-link btn-block text-left collapsed d-flex justify-content-between align-items-center" type="button" data-toggle="collapse" data-target="#collapsePlanName" aria-expanded="false" aria-controls="collapsePlanName">
+          <span>Plan Name</span>
+          <i class='bx bxs-chevron-down'></i>
+        </button>
+      </h2>
+    </div>
+    <div id="collapsePlanName" class="collapse" aria-labelledby="headingPlanName" data-parent="#planSettingsAccordion">
+      <div class="card-body">
+        <form method="POST">
+          <div class="form-group">
+            <label for="plan_name">Plan Name</label>
+            <input type="text" id="plan_name" name="plan_name" class="form-control" placeholder="Enter new plan name" value="{{ plan.name }}">
+          </div>
+          <button type="submit" name="update_plan_name" value="true" class="btn btn-primary">Save</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category Ratio Section -->
+  <div class="card">
+    <div class="card-header" id="headingCategoryRatio">
+      <h2 class="mb-0">
+        <button class="btn btn-link btn-block text-left collapsed d-flex justify-content-between align-items-center" type="button" data-toggle="collapse" data-target="#collapseCategoryRatio" aria-expanded="false" aria-controls="collapseCategoryRatio">
+          <span>Category Ratios</span>
+          <i class='bx bxs-chevron-down'></i>
+        </button>
+      </h2>
+    </div>
+    <div id="collapseCategoryRatio" class="collapse" aria-labelledby="headingCategoryRatio" data-parent="#planSettingsAccordion">
+      <div class="card-body">
+        <form method="POST">
+          <div class="form-row">
+            <div class="form-group col-md-4">
+              <label for="needs_ratio">Needs (%)</label>
+              <input type="number" id="needs_ratio" name="needs_ratio" class="form-control" value="{{ plan.budget_pref.get('ratios', {}).get('needs', 50) }}">
+            </div>
+            <div class="form-group col-md-4">
+              <label for="wants_ratio">Wants (%)</label>
+              <input type="number" id="wants_ratio" name="wants_ratio" class="form-control" value="{{ plan.budget_pref.get('ratios', {}).get('wants', 30) }}">
+            </div>
+            <div class="form-group col-md-4">
+              <label for="savings_ratio">Investments (%)</label>
+              <input type="number" id="savings_ratio" name="savings_ratio" class="form-control" value="{{ plan.budget_pref.get('ratios', {}).get('savings', 20) }}">
+            </div>
+          </div>
+          <button type="submit" name="update_ratios" value="true" class="btn btn-primary">Save Ratios</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Subcategories Section -->
+  <div class="card">
+    <div class="card-header" id="headingSubcategories">
+      <h2 class="mb-0">
+        <button class="btn btn-link btn-block text-left collapsed d-flex justify-content-between align-items-center" type="button" data-toggle="collapse" data-target="#collapseSubcategories" aria-expanded="false" aria-controls="collapseSubcategories">
+          <span>Sub-Categories</span>
+          <i class='bx bxs-chevron-down'></i>
+        </button>
+      </h2>
+    </div>
+    <div id="collapseSubcategories" class="collapse" aria-labelledby="headingSubcategories" data-parent="#planSettingsAccordion">
+      <div class="card-body">
+        <div class="accordion" id="categoryAccordion">
+          {% set categories = {'needs': 'Needs', 'wants': 'Wants', 'savings': 'Investments'} %}
+          {% for cat_key, cat_name in categories.items() %}
+          <div class="card">
+            <div class="card-header" id="heading-{{ cat_key }}">
+              <h2 class="mb-0">
+                <button class="btn btn-link btn-block text-left d-flex justify-content-between align-items-center" type="button" data-toggle="collapse" data-target="#collapse-{{ cat_key }}" aria-expanded="false" aria-controls="collapse-{{ cat_key }}">
+                  {{ cat_name }}
+                  <i class='bx bxs-chevron-down'></i>
+                </button>
+              </h2>
+            </div>
+            <div id="collapse-{{ cat_key }}" class="collapse" aria-labelledby="heading-{{ cat_key }}" data-parent="#categoryAccordion">
+              <div class="card-body">
+                <ul class="list-group mb-3">
+                  {% for subcat in plan.budget_pref.get('subcategories', {}).get(cat_key, []) %}
+                  <li class="list-group-item d-flex justify-content-between align-items-center subcategory-item">
+                    {{ subcat }}
+                    <form method="POST" class="delete-form">
+                      <input type="hidden" name="category" value="{{ cat_key }}">
+                      <input type="hidden" name="subcategory_name" value="{{ subcat }}">
+                      <button type="submit" name="delete_subcategory" value="true" class="btn btn-danger btn-sm delete-btn">
+                        <i class='bx bx-trash'></i>
+                      </button>
+                    </form>
+                  </li>
+                  {% else %}
+                  <li class="list-group-item text-muted">No subcategories yet.</li>
+                  {% endfor %}
+                </ul>
+                <form method="POST">
+                  <div class="input-group">
+                    <input type="hidden" name="category" value="{{ cat_key }}">
+                    <input type="text" name="subcategory_name" class="form-control" placeholder="New {{ cat_name }} subcategory">
+                    <div class="input-group-append">
+                      <button type="submit" name="add_subcategory" value="true" class="btn btn-primary">Add</button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
