@@ -2,6 +2,7 @@
 html, body{
   height:100%;
   margin:0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* ===== finance backdrop ===== */
@@ -15,59 +16,104 @@ body.signup-page{
 
 /* Add transition for smooth sidebar collapse */
 #sidebar {
-  transition: width 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 body.with-sidebar {
-  transition: margin-left 0.3s ease;
+  transition: margin-left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-/* dark navy overlay + slight blur */
+/* Enhanced dark navy overlay + slight blur */
 body.login-page::before,
 body.signup-page::before{
   content:"";
   position:fixed;
   inset:0;
-  background:rgba(0,0,32,.55); /* 55 % opacity tint */
-  backdrop-filter:blur(2px);
+  background:rgba(0,0,32,.65); /* 65% opacity tint for better contrast */
+  backdrop-filter:blur(8px) saturate(150%);
+  -webkit-backdrop-filter:blur(8px) saturate(150%);
   z-index:-1;                  /* behind everything */
 }
 
-/* ========== glass-morph card ========== */
+/* ========== Enhanced liquid glass card ========== */
 .card.glass{
-  background:rgba(255,255,255,0);      /* frosted glass */
-  border:1px solid rgba(255,255,255,.10);
-  border-radius:.75rem;
-  backdrop-filter:blur(4px);
-  -webkit-backdrop-filter:blur(4px);
-  box-shadow:0 1px 1px rgba(0,0,0,.05);
-  color:#fff;                            /* white text on dark bg */
+  background: rgba(255, 255, 255, 0.005) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 20px;
+  backdrop-filter: blur(12px) saturate(110%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(110%) !important;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.03),
+              0 0 0 1px rgba(255, 255, 255, 0.01) inset !important;
+  color: #fff !important;
+  position: relative;
+  overflow: hidden;
+  animation: fadeInUp 0.6s ease-out;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-/* ========== input group with icon ========== */
+.card.glass:hover {
+  transform: translateY(-2px) !important;
+  background: rgba(255, 255, 255, 0.01) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05),
+              0 0 0 1px rgba(255, 255, 255, 0.02) inset !important;
+}
+
+.card.glass::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+}
+
+/* ========== Modern input styling ========== */
 .input-group.custom-input{
-  border:1px solid #ced4da;
-  border-radius:.25rem;
-  display:flex;
-  background:#fff;                       /* white body for contrast */
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+  display: flex;
+  overflow: hidden;
+}
+
+.input-group.custom-input:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.input-group.custom-input:focus-within {
+  border-color: rgba(34, 139, 87, 0.8);
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 0 3px rgba(34, 139, 87, 0.2);
 }
 
 .input-group.custom-input .input-group-text,
 .input-group.custom-input .form-control{
-  border:none;
-  background:#fff;
+  border: none;
+  background: transparent;
+  color: #fff;
 }
 
-.input-group-text{                       /* centres the icon nicely */
-  padding:0 .75rem;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+.input-group.custom-input .form-control::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.input-group-text{
+  padding: 0 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 /* optional: when the field is focused, add subtle highlight */
 .input-group.custom-input .form-control:focus{
-  box-shadow:none;
+  box-shadow: none;
+  color: #fff;
 }
 
 /* left menu tweaks */
@@ -86,21 +132,85 @@ body.signup-page::before{
 
 /* === vertical sidebar === */
 #sidebar{
-  width:287px;          /* adjust to taste */
-  min-height:100vh;
-  position:fixed;       /* stick while scrolling */
-  left:0; top:0;
+  width: 287px;          /* adjust to taste */
+  min-height: 100vh;
+  position: fixed;       /* stick while scrolling */
+  left: 0; top: 0;
   overflow: visible !important; /* This allows the popup to show */
   z-index: 1040; 
+  background: linear-gradient(180deg, 
+    rgba(34, 139, 87, 0.95) 0%, 
+    rgba(0, 100, 148, 0.95) 50%, 
+    rgba(21, 67, 96, 0.95) 100%) !important;
+  backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 body.with-sidebar{
-  margin-left:287px;     /* same width you gave #sidebar */
+  margin-left: 287px;     /* same width you gave #sidebar */
 }
 
-/* change the sidebar background */
-#sidebar {
-  background-color: rgb(36, 64, 207) !important;   /* pick any colour you like */
+#sidebar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.02);
+  pointer-events: none;
+}
+
+/* Modern sidebar navigation */
+#sidebar .nav-link {
+  color: rgba(255, 255, 255, 0.8);
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  border-radius: 12px;
+  margin: 2px 8px;
+  padding: 12px 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+#sidebar .nav-link:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  transform: translateX(4px);
+}
+
+#sidebar .nav-link.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(15px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* === Modern home page styling === */
+body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) {
+  background: linear-gradient(135deg, 
+    #e8f5e8 0%, 
+    #a8d8ea 25%, 
+    #52b788 50%, 
+    #2d6187 75%, 
+    #1e3a5f 100%);
+  min-height: 100vh;
+  background-size: 400% 400%;
+  animation: gradientShift 20s ease infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* === pages that have no sidebar (login, signup, etc.) === */
+body.no-sidebar{
+  margin-left: 0 !important;
+}
+
+body.auth{                    /* optional shared tweaks */
+  background:#0c0c0d url("/static/images/bg-finance.jpg") center/cover no-repeat;
 }
 
 /* existing link styles */
@@ -114,22 +224,90 @@ body.with-sidebar{
   background: #0520a61a;       /* same hue, 10 % opacity */
 }
 
-/* === pages that have no sidebar (login, signup, etc.) === */
-body.no-sidebar{
-  margin-left:0 !important;   /* undo the 240 px push */
+/* ========== Modern button styling ========== */
+.btn-primary {
+  background: linear-gradient(135deg, #52b788 0%, #2d6187 100%);
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  position: relative;
+  overflow: hidden;
 }
 
-body.auth{                    /* optional shared tweaks */
-  background:#0c0c0d url("/static/images/bg-finance.jpg") center/cover no-repeat;
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(82, 183, 136, 0.4);
+  background: linear-gradient(135deg, #68c298 0%, #3a7197 100%);
 }
 
-.logo-img {
-  width: 50px;     /* adjust to taste */
-  height: 50px;    /* keep it square */
-  object-fit: contain;   /* keeps aspect ratio */
+.btn-primary:focus {
+  box-shadow: 0 0 0 3px rgba(82, 183, 136, 0.3);
 }
 
-.sidebar-header .logo-img{ margin-right:.5rem !important; }
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  transition: left 0.5s;
+}
+
+.btn-primary:hover::before {
+  left: 100%;
+}
+
+/* ========== Modern card styling for dashboard ========== */
+.card:not(.glass) {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.card:not(.glass):hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+  background: rgba(34, 139, 87, 0.1);
+  border-bottom: 1px solid rgba(34, 139, 87, 0.2);
+  border-radius: 20px 20px 0 0 !important;
+}
+
+/* ========== Enhanced dropdown styling ========== */
+.plan-popup {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  width: 320px;
+  padding: 0;
+  margin-top: 10px !important;
+  z-index: 1050;
+}
+
+.plan-popup .dropdown-item {
+  color: #333;
+  transition: all 0.3s ease;
+  border-radius: 12px;
+  margin: 4px 8px;
+  padding: 12px 16px;
+}
+
+.plan-popup .dropdown-item:hover {
+  background: rgba(34, 139, 87, 0.1);
+  color: #228b57;
+  transform: translateX(4px);
+}
 
 /* Styles for the new Plan Popup Menu */
 .plan-popup {
@@ -188,7 +366,6 @@ body.auth{                    /* optional shared tweaks */
 .plan-popup .dropdown-divider {
     margin: 8px 0;
 }
-
 
 /* Remove underline from accordion headers on hover */
 .accordion .card-header .btn-link:hover {
@@ -340,4 +517,95 @@ body.sidebar-collapsed #sidebar #sidebar-toggle i {
   padding: 0.5rem 1rem;
   line-height: 1.2;
   text-align: center;
+}
+
+/* ========== Settings menu modern styling ========== */
+#settingsMenu .list-group-item{
+  border: 0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin: 2px 0;
+  background: rgba(255, 255, 255, 0.7);
+  transition: all 0.3s ease;
+}
+
+#settingsMenu .list-group-item:hover{
+  background: rgba(34, 139, 87, 0.1);
+  transform: translateX(4px);
+}
+
+#settingsMenu .list-group-item.active{
+  background: linear-gradient(135deg, #52b788 0%, #2d6187 100%);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 8px 25px rgba(82, 183, 136, 0.3);
+}
+
+/* ========== Form labels styling ========== */
+.card.glass label {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+/* ========== Logo enhancement ========== */
+.logo-img {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+  transition: all 0.3s ease;
+}
+
+.sidebar-header .logo-img:hover { 
+  transform: scale(1.05);
+}
+
+.sidebar-header .logo-img{ 
+  margin-right:.5rem !important; 
+}
+
+/* ========== Enhanced animations ========== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ========== Additional modern enhancements ========== */
+.text-primary {
+  color: #228b57 !important;
+}
+
+.bg-primary {
+  background: linear-gradient(135deg, #52b788 0%, #2d6187 100%) !important;
+}
+
+/* ========== Responsive enhancements ========== */
+@media (max-width: 768px) {
+  .card.glass {
+    margin: 20px;
+    border-radius: 16px;
+  }
+  
+  .input-group.custom-input {
+    border-radius: 12px;
+  }
+  
+  .btn-primary {
+    border-radius: 10px;
+  }
+  
+  #sidebar {
+    width: 250px;
+  }
+  
+  body.with-sidebar {
+    margin-left: 250px;
+  }
 }

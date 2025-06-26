@@ -9,7 +9,7 @@ import os, random, time
 from . import db, oauth, mail
 from .models import User
 
-auth = Blueprint("auth", __name__)
+auth = Blueprint("auth", __name__) 
 
 # ── Google OAuth client ──────────────────────────────────────────
 google = oauth.register(
