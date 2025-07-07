@@ -1,0 +1,48 @@
+/* Primary button styling */
+.btn-primary {
+  background: linear-gradient(135deg, #52b788 0%, #2d6187 100%);
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(82, 183, 136, 0.4);
+  background: linear-gradient(135deg, #68c298 0%, #3a7197 100%);
+}
+
+.btn-primary:focus {
+  box-shadow: 0 0 0 3px rgba(82, 183, 136, 0.3);
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  transition: left 0.5s;
+}
+
+.btn-primary:hover::before {
+  left: 100%;
+}
+
+/* Auth page navigation links - Force blue color with high specificity */
+body.login-page .card p a.register-link,
+body.signup-page .card p a.login-link,
+.card .login-link,
+.card .register-link,
+a.login-link,
+a.register-link {
+  color: #4a90e2 !important;      /* Force blue color */
+  font-weight: 600 !important;    /* Make it stand out */
+  text-decoration: none !important; /* No underlines */
+}

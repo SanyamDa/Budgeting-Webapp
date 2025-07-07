@@ -1,0 +1,21 @@
+/* Account Settings Page Styles */
+
+/* This file was created to fix 404 error in console */
+/* Add account settings specific styles here when needed */
+
+.account-settings-container {
+    padding: 20px;
+}
+
+.account-settings-form {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.account-settings-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 30px;
+    margin-bottom: 20px;
+}

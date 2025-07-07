@@ -18,6 +18,44 @@ class Plan(db.Model):
     budget_pref    = db.Column(JSON)  # e.g., {"needs": 50, "wants": 30, "savings": 20}
     user_id        = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
+# Budget Category model
+class BudgetCategory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    icon = db.Column(db.String(50), default='bx-category')
+    main_category = db.Column(db.String(50), nullable=False)  # 'needs', 'wants', 'bills', 'investments'
+    assigned_amount = db.Column(db.Float, default=0.0)
+    spent_amount = db.Column(db.Float, default=0.0)
+    plan_id = db.Column(db.Integer, db.ForeignKey('plan.id'), nullable=False)
+    created_date = db.Column(db.DateTime(timezone=True), default=func.now())
+    
+    # Relationship
+    plan = db.relationship('Plan', backref=db.backref('categories', lazy=True, cascade="all, delete-orphan"))
+    transactions = db.relationship('Transaction', backref='category', lazy=True, cascade="all, delete-orphan")
+    
+    @property
+    def available_amount(self):
+        return self.assigned_amount - self.spent_amount
+    
+    @property
+    def progress_percentage(self):
+        if self.assigned_amount == 0:
+            return 0
+        return min((self.spent_amount / self.assigned_amount) * 100, 100)
+
+# Transaction model
+class Transaction(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    description = db.Column(db.String(200), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    transaction_date = db.Column(db.DateTime(timezone=True), default=func.now())
+    category_id = db.Column(db.Integer, db.ForeignKey('budget_category.id'), nullable=False)
+    plan_id = db.Column(db.Integer, db.ForeignKey('plan.id'), nullable=False)
+    created_date = db.Column(db.DateTime(timezone=True), default=func.now())
+    
+    # Relationship
+    plan = db.relationship('Plan', backref=db.backref('transactions', lazy=True, cascade="all, delete-orphan"))
+
 # User model updated for multi-plan support
 class User(db.Model, UserMixin):
     id         = db.Column(db.Integer, primary_key=True)

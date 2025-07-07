@@ -1,0 +1,302 @@
+/* Enhanced glassmorphism for auth pages */
+body.login-page,
+body.signup-page,
+body.forgot-page,
+body.reset-page,
+body.verify-page {
+  background: url("/static/images/financeimg.jpg") center / cover no-repeat fixed;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Light glass overlay - no dark background */
+body.login-page::before,
+body.signup-page::before,
+body.forgot-page::before,
+body.reset-page::before,
+body.verify-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 32, .65);
+  backdrop-filter: blur(8px) saturate(150%);
+  -webkit-backdrop-filter: blur(8px) saturate(150%);
+  z-index: -1;
+}
+
+/* Enhanced liquid glass card for auth pages */
+body.login-page .card.glass,
+body.signup-page .card.glass,
+body.forgot-page .card.glass,
+body.reset-page .card.glass,
+body.verify-page .card.glass {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 25px;
+  backdrop-filter: blur(25px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(25px) saturate(120%) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1),
+              0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+              0 2px 16px rgba(255, 255, 255, 0.1) !important;
+  color: #fff !important;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Glass card hover effect */
+body.login-page .card.glass:hover,
+body.signup-page .card.glass:hover,
+body.forgot-page .card.glass:hover,
+body.reset-page .card.glass:hover,
+body.verify-page .card.glass:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15),
+              0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+              0 4px 20px rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Glass card shine effect */
+body.login-page .card.glass::before,
+body.signup-page .card.glass::before,
+body.forgot-page .card.glass::before,
+body.reset-page .card.glass::before,
+body.verify-page .card.glass::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+}
+
+/* Liquid glass input styling for auth pages */
+body.login-page .form-control,
+body.signup-page .form-control,
+body.forgot-page .form-control,
+body.reset-page .form-control,
+body.verify-page .form-control {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 15px !important;
+  backdrop-filter: blur(15px) !important;
+  -webkit-backdrop-filter: blur(15px) !important;
+  color: #fff !important;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05),
+              0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+}
+
+body.login-page .form-control:focus,
+body.signup-page .form-control:focus,
+body.forgot-page .form-control:focus,
+body.reset-page .form-control:focus,
+body.verify-page .form-control:focus {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.15),
+              0 4px 12px rgba(0, 0, 0, 0.1),
+              0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
+  transform: translateY(-1px);
+}
+
+body.login-page .form-control::placeholder,
+body.signup-page .form-control::placeholder,
+body.forgot-page .form-control::placeholder,
+body.reset-page .form-control::placeholder,
+body.verify-page .form-control::placeholder {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* Glass effect for input groups */
+body.login-page .input-group.custom-input,
+body.signup-page .input-group.custom-input,
+body.forgot-page .input-group.custom-input,
+body.reset-page .input-group.custom-input,
+body.verify-page .input-group.custom-input {
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 15px !important;
+  backdrop-filter: blur(15px) !important;
+  -webkit-backdrop-filter: blur(15px) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05),
+              0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+  overflow: hidden;
+}
+
+body.login-page .input-group.custom-input:focus-within,
+body.signup-page .input-group.custom-input:focus-within,
+body.forgot-page .input-group.custom-input:focus-within,
+body.reset-page .input-group.custom-input:focus-within,
+body.verify-page .input-group.custom-input:focus-within {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.15),
+              0 4px 12px rgba(0, 0, 0, 0.1),
+              0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
+  transform: translateY(-1px);
+}
+
+/* Glass effect for input group text */
+body.login-page .input-group-text,
+body.signup-page .input-group-text,
+body.forgot-page .input-group-text,
+body.reset-page .input-group-text,
+body.verify-page .input-group-text {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: none !important;
+  border-radius: 15px 0 0 15px !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Remove border-right from input group form controls */
+body.login-page .input-group .form-control.border-right-0,
+body.signup-page .input-group .form-control.border-right-0,
+body.forgot-page .input-group .form-control.border-right-0,
+body.reset-page .input-group .form-control.border-right-0,
+body.verify-page .input-group .form-control.border-right-0 {
+  border-left: none !important;
+  border-radius: 0 15px 15px 0 !important;
+  background: transparent !important;
+}
+
+/* Enhanced glass button styling */
+body.login-page .btn-primary,
+body.signup-page .btn-primary,
+body.forgot-page .btn-primary,
+body.reset-page .btn-primary,
+body.verify-page .btn-primary {
+  background: linear-gradient(135deg, rgba(82, 183, 136, 0.8), rgba(45, 97, 135, 0.8)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 15px !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  color: #fff !important;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1),
+              0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+}
+
+body.login-page .btn-primary:hover,
+body.signup-page .btn-primary:hover,
+body.forgot-page .btn-primary:hover,
+body.reset-page .btn-primary:hover,
+body.verify-page .btn-primary:hover {
+  background: linear-gradient(135deg, rgba(82, 183, 136, 0.9), rgba(45, 97, 135, 0.9)) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15),
+              0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+}
+
+/* Glass effect for secondary buttons */
+body.login-page .btn-outline-primary,
+body.signup-page .btn-outline-primary,
+body.forgot-page .btn-outline-primary,
+body.reset-page .btn-outline-primary,
+body.verify-page .btn-outline-primary {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 15px !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  color: #fff !important;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+}
+
+body.login-page .btn-outline-primary:hover,
+body.signup-page .btn-outline-primary:hover,
+body.forgot-page .btn-outline-primary:hover,
+body.reset-page .btn-outline-primary:hover,
+body.verify-page .btn-outline-primary:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Enhanced autofill protection to maintain glass effect */
+body.login-page .form-control:-webkit-autofill,
+body.login-page .form-control:-webkit-autofill:hover,
+body.login-page .form-control:-webkit-autofill:focus,
+body.login-page .form-control:-webkit-autofill:active,
+body.signup-page .form-control:-webkit-autofill,
+body.signup-page .form-control:-webkit-autofill:hover,
+body.signup-page .form-control:-webkit-autofill:focus,
+body.signup-page .form-control:-webkit-autofill:active,
+body.forgot-page .form-control:-webkit-autofill,
+body.forgot-page .form-control:-webkit-autofill:hover,
+body.forgot-page .form-control:-webkit-autofill:focus,
+body.forgot-page .form-control:-webkit-autofill:active,
+body.reset-page .form-control:-webkit-autofill,
+body.reset-page .form-control:-webkit-autofill:hover,
+body.reset-page .form-control:-webkit-autofill:focus,
+body.reset-page .form-control:-webkit-autofill:active,
+body.verify-page .form-control:-webkit-autofill,
+body.verify-page .form-control:-webkit-autofill:hover,
+body.verify-page .form-control:-webkit-autofill:focus,
+body.verify-page .form-control:-webkit-autofill:active {
+    /* Force transparent background to maintain glass effect */
+    -webkit-box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.05) inset !important;
+    -webkit-text-fill-color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    background-image: none !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 15px !important;
+    color: #ffffff !important;
+    /* Prevent browser from overriding background */
+    transition: background-color 5000s ease-in-out 0s !important;
+    animation: none !important;
+}
+
+/* Additional fix for input groups with autofill */
+body.login-page .input-group .form-control:-webkit-autofill,
+body.signup-page .input-group .form-control:-webkit-autofill,
+body.forgot-page .input-group .form-control:-webkit-autofill,
+body.reset-page .input-group .form-control:-webkit-autofill,
+body.verify-page .input-group .form-control:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.05) inset !important;
+    -webkit-text-fill-color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    background-image: none !important;
+    border-left: none !important;
+    border-radius: 0 15px 15px 0 !important;
+    color: #ffffff !important;
+    transition: background-color 5000s ease-in-out 0s !important;
+}
+
+/* Force text color for all autofill states */
+body.login-page input:-webkit-autofill,
+body.signup-page input:-webkit-autofill,
+body.forgot-page input:-webkit-autofill,
+body.reset-page input:-webkit-autofill,
+body.verify-page input:-webkit-autofill {
+    -webkit-text-fill-color: #ffffff !important;
+    color: #ffffff !important;
+}
+
+/* Shared tweaks when no sidebar */
+body.no-sidebar { 
+  margin-left: 0 !important; 
+}
+
+/* Remove old auth background */
+body.auth { 
+  background: none !important;
+}
+
+/* Final override for auth navigation links - Force blue color */
+body.login-page a.register-link,
+body.signup-page a.login-link,
+body.forgot-page a.login-link,
+body.reset-page a.login-link,
+body.verify-page a.login-link {
+  color: #4a90e2 !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+}

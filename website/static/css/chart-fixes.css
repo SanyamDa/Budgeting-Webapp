@@ -1,0 +1,44 @@
+/* Chart.js legend text color fix */
+.chartjs-legend,
+.chartjs-legend *,
+.chartjs-legend-item,
+.chartjs-legend-item *,
+.chartjs-legend .legend-color-box + *,
+.chartjs-legend .legend-text {
+    color: #fff !important;
+}
+
+/* Target Chart.js generated legend elements */
+canvas + .chartjs-legend,
+canvas + .chartjs-legend *,
+.chart-container .chartjs-legend,
+.chart-container .chartjs-legend * {
+    color: #fff !important;
+}
+
+/* Force all text in chart area to be white */
+.chart-pie .chartjs-legend,
+.chart-pie .chartjs-legend * {
+    color: #fff !important;
+}
+
+/* More aggressive targeting */
+[data-chartjs-legend] *,
+[data-chartjs-legend] {
+    color: #fff !important;
+}
+
+/* Target Chart.js v2 specific legend elements */
+.chartjs-legend-doughnut,
+.chartjs-legend-doughnut *,
+.chartjs-legend ul,
+.chartjs-legend ul li,
+.chartjs-legend li span {
+    color: #fff !important;
+}
+
+/* Override any card or text color inheritance */
+.card .chartjs-legend,
+.card .chartjs-legend * {
+    color: #fff !important;
+}

@@ -1,4 +1,14 @@
-/* ========== global resets ========== */
+/*
+  Deprecated monolithic stylesheet.
+  All styles have been migrated into modular CSS files:
+  - general.css
+  - sidebar.css
+  - buttons.css
+  - dashboard.css
+  - auth.css
+
+  You may remove this file entirely once confident that no templates reference it.
+*/
 html, body{
   height:100%;
   margin:0;
@@ -18,7 +28,7 @@ body.signup-page{
 #sidebar {
   transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
-
+j
 body.with-sidebar {
   transition: margin-left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }

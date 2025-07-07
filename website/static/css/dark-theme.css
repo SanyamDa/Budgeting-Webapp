@@ -1,10 +1,28 @@
 [data-theme='dark'] body {
     background-color: #161625;
-    color: #dcdcdc;
+    color: #fff; /* Brighter default text */
 }
 
-[data-theme='dark'] .bg-white {
+/* Force white text in dark cards and forms */
+[data-theme='dark'] .card,
+[data-theme='dark'] .form-control,
+[data-theme='dark'] .form-select,
+[data-theme='dark'] .input-group-text {
+    color: #fff !important;
+}
+
+/* Ensure all text in cards is white */
+[data-theme='dark'] .card *:not(.btn) {
+    color: #fff !important;
+}
+
+[data-theme='dark'] .bg-white,
+[data-theme='dark'] .card,
+[data-theme='dark'] .form-control,
+[data-theme='dark'] .form-select,
+[data-theme='dark'] .input-group-text {
     background-color: #212134 !important;
+    border-color: #444 !important;
 }
 
 [data-theme='dark'] .card {
@@ -12,8 +30,14 @@
     border: 1px solid #333;
 }
 
-[data-theme='dark'] .text-gray-800, [data-theme='dark'] .text-gray-900 {
-    color: #dcdcdc !important;
+[data-theme='dark'] .text-gray-800,
+[data-theme='dark'] .text-gray-900,
+[data-theme='dark'] .text-muted,
+[data-theme='dark'] .text-gray-600,
+[data-theme='dark'] .form-label,
+[data-theme='dark'] .form-text {
+    color: #fff !important;
+    opacity: 0.9;
 }
 
 [data-theme='dark'] .text-gray-600, [data-theme='dark'] .text-muted {
@@ -22,7 +46,7 @@
 
 [data-theme='dark'] .sidebar {
     background-color: #161625;
-    border-right: 1px solid #333;
+    border-right: 1px solid #333; 
 }
 
 [data-theme='dark'] .sidebar .nav-item .nav-link span, [data-theme='dark'] .sidebar .sidebar-brand {

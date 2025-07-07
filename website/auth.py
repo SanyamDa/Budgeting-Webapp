@@ -199,30 +199,70 @@ def resend_otp():
 
     return {"ok": True}
 
-@auth.route("/forgot-password",methods=["GET","POST"])
+@auth.route("/forgot-password", methods=["GET", "POST"])
 def forgot_password():
+    print("\n=== DEBUG: Entered forgot_password function ===")  # Debug print
     if request.method == "POST":
-        email = request.form.get("email","").strip().lower() #extracts only email - all lowercase
-        user = User.query.filter_by(email=email).first() #check database
-        if user: #if user is found
-            token = generate_reset_token(email) #contains the email, allows password to be changed and also carries expiry time
-            reset_url = url_for("auth.reset_password",token=token,_external=True)
+        print("DEBUG: Received POST request")  # Debug print
+        email = request.form.get("email", "").strip().lower()
+        print(f"DEBUG: Email from form: '{email}'")  # Debug print
+        
+        user = User.query.filter_by(email=email).first()
+        print(f"DEBUG: User found: {user is not None}")  # Debug print
+
+        # Debug: Print mail config
+        print("\n=== DEBUG: Mail Configuration ===")
+        print(f"MAIL_SERVER: {current_app.config.get('MAIL_SERVER')}")
+        print(f"MAIL_PORT: {current_app.config.get('MAIL_PORT')}")
+        print(f"MAIL_USE_TLS: {current_app.config.get('MAIL_USE_TLS')}")
+        print(f"MAIL_USERNAME: {current_app.config.get('MAIL_USERNAME')}")
+        print("MAIL_PASSWORD: [REDACTED]")
+        print(f"MAIL_DEFAULT_SENDER: {current_app.config.get('MAIL_DEFAULT_SENDER')}")
+        print("===============================\n")
+        
+        if user:  # if user is found
+            print("DEBUG: User exists, attempting to send reset email")  # Debug print
             try:
-                mail.send(Message( #sends mail
+                # Generate reset token and URL
+                print("DEBUG: Generating reset token...")  # Debug print
+                token = generate_reset_token(email)
+                reset_url = url_for("auth.reset_password", token=token, _external=True)
+                print(f"DEBUG: Generated reset URL: {reset_url}")  # Debug print
+                
+                # Create message
+                print("DEBUG: Creating email message...")  # Debug print
+                msg = Message(
                     subject="Reset your password",
                     recipients=[email],
-                    sender=current_app.config["MAIL_USERNAME"],
+                    sender=current_app.config["MAIL_DEFAULT_SENDER"],
                     body=f"Hi {user.first_name or ''},\n\n"
-                        f"Click to set a new password (valid for 60 mins): \n{reset_url}"
-                ))
-            except Exception:
-                current_app.logger.exception("reset-email failed")
-
-                flash("If that email exists, a reset link has been sent,","info")
+                         f"Click to set a new password (valid for 60 mins): \n{reset_url}"
+                )
+                
+                # Send message
+                print("DEBUG: Attempting to send email...")  # Debug print
+                mail.send(msg)
+                print("DEBUG: Email sent successfully!")  # Debug print
+                
+                flash("If that email exists, a reset link has been sent.", "info")
                 return redirect(url_for("auth.login"))
+                
+            except Exception as e:
+                print(f"ERROR: Failed to send email: {str(e)}")  # Debug print
+                import traceback
+                print("Full traceback:")
+                print(traceback.format_exc())  # Print full traceback
+                current_app.logger.exception("reset-email failed")
+                flash("There was an error sending the reset email. Please try again later.", "error")
+                return render_template("forgot.html")
+        else:
+            print("DEBUG: No user found with that email")  # Debug print
+            # For security, don't reveal if email exists or not
+            flash("If that email exists, a reset link has been sent.", "info")
+            return redirect(url_for("auth.login"))
             
     return render_template("forgot.html")
-
+    
 @auth.route("/reset/<token>", methods=["GET", "POST"])
 def reset_password(token):
     email = verify_reset_token(token)

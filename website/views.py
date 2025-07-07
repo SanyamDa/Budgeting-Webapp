@@ -1,9 +1,11 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from werkzeug.security import generate_password_hash 
 from flask_login import login_required, current_user
-from .models import Plan
+from .models import Plan, BudgetCategory, Transaction
 from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy import func
 from . import db
+import datetime
 
 views = Blueprint('views', __name__)
 
@@ -15,33 +17,171 @@ def home():
         return redirect(url_for('onboard.show_form'))
 
     plan = current_user.active_plan
-    budget_ratios = plan.budget_pref.get('ratios', {})
-
-    # Prepare data for the budget allocation chart
-    chart_data = {
-        'labels': ['Needs', 'Wants', 'Savings'],
-        'datasets': [{
-            'label': 'Budget Allocation',
-            'data': [
-                budget_ratios.get('needs', 0),
-                budget_ratios.get('wants', 0),
-                budget_ratios.get('savings', 0)
-            ],
-            'backgroundColor': [
-                '#4e73df',
-                '#1cc88a',
-                '#36b9cc'
-            ],
-            'hoverBackgroundColor': [
-                '#2e59d9',
-                '#17a673',
-                '#2c9faf'
-            ],
-            'hoverBorderColor': "rgba(234, 236, 244, 1)",
-        }]
+    
+    # Get current month and year
+    current_date = datetime.datetime.now()
+    current_month = current_date.strftime('%B')
+    current_year = current_date.year
+    
+    # Get categories organized by main category
+    categories = BudgetCategory.query.filter_by(plan_id=plan.id).all()
+    
+    # Organize categories by main category
+    organized_categories = {
+        'bills': [],
+        'needs': [],
+        'wants': [],
+        'investments': []
     }
+    
+    total_assigned = 0
+    total_spent = 0
+    
+    for category in categories:
+        # Update spent amount from transactions
+        spent = db.session.query(func.sum(Transaction.amount)).filter_by(
+            category_id=category.id
+        ).scalar() or 0
+        category.spent_amount = abs(spent)  # Make positive for display
+        total_assigned += category.assigned_amount
+        total_spent += category.spent_amount
+        
+        if category.main_category in organized_categories:
+            organized_categories[category.main_category].append(category)
+    
+    # Calculate totals by main category
+    category_totals = {}
+    for main_cat, cats in organized_categories.items():
+        category_totals[main_cat] = {
+            'assigned': sum(cat.assigned_amount for cat in cats),
+            'spent': sum(cat.spent_amount for cat in cats),
+            'available': sum(cat.available_amount for cat in cats)
+        }
+    
+    # Calculate summary data
+    available_amount = total_assigned - total_spent
+    
+    return render_template("home.html", 
+                         plan=plan,
+                         categories=organized_categories,
+                         category_totals=category_totals,
+                         current_month=current_month,
+                         current_year=current_year,
+                         total_assigned=total_assigned,
+                         total_spent=total_spent,
+                         available_amount=available_amount)
 
-    return render_template("home.html", plan=plan, chart_data=chart_data)
+@views.route('/api/update-category-amount', methods=['POST'])
+@login_required
+def update_category_amount():
+    """API endpoint to update category assigned amount"""
+    try:
+        data = request.get_json()
+        category_id = data.get('category_id')
+        new_amount = float(data.get('amount', 0))
+        
+        category = BudgetCategory.query.filter_by(
+            id=category_id, 
+            plan_id=current_user.active_plan.id
+        ).first()
+        
+        if not category:
+            return jsonify({'success': False, 'error': 'Category not found'}), 404
+        
+        category.assigned_amount = new_amount
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'category_id': category_id,
+            'new_amount': new_amount,
+            'available_amount': category.available_amount
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@views.route('/api/add-transaction', methods=['POST'])
+@login_required
+def add_transaction():
+    """API endpoint to add a new transaction"""
+    try:
+        data = request.get_json()
+        category_id = data.get('category_id')
+        amount = float(data.get('amount', 0))
+        description = data.get('description', 'Transaction')
+        
+        category = BudgetCategory.query.filter_by(
+            id=category_id,
+            plan_id=current_user.active_plan.id
+        ).first()
+        
+        if not category:
+            return jsonify({'success': False, 'error': 'Category not found'}), 404
+        
+        # Create new transaction (amount should be negative for expenses)
+        transaction = Transaction(
+            description=description,
+            amount=-abs(amount),  # Make negative for expenses
+            category_id=category_id,
+            plan_id=current_user.active_plan.id
+        )
+        
+        db.session.add(transaction)
+        db.session.commit()
+        
+        # Update category spent amount
+        spent = db.session.query(func.sum(Transaction.amount)).filter_by(
+            category_id=category.id
+        ).scalar() or 0
+        category.spent_amount = abs(spent)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'transaction_id': transaction.id,
+            'category_spent': category.spent_amount,
+            'category_available': category.available_amount
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@views.route('/api/create-category', methods=['POST'])
+@login_required
+def create_category():
+    """API endpoint to create a new budget category"""
+    try:
+        data = request.get_json()
+        name = data.get('name')
+        main_category = data.get('main_category')
+        icon = data.get('icon', 'bx-category')
+        
+        if not name or not main_category:
+            return jsonify({'success': False, 'error': 'Name and main category required'}), 400
+        
+        category = BudgetCategory(
+            name=name,
+            main_category=main_category,
+            icon=icon,
+            plan_id=current_user.active_plan.id
+        )
+        
+        db.session.add(category)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'category_id': category.id,
+            'name': category.name,
+            'main_category': category.main_category
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @views.route('/open-plan')
 @login_required
@@ -197,4 +337,3 @@ def set_password():
         flash('Password updated successfully!', category='success')
 
     return redirect(url_for('views.account_settings'))
-

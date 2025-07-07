@@ -1,0 +1,123 @@
+/* Gradient animated background for dashboard & home pages */
+
+/* Headings & base text colour for light theme */
+body:not([data-theme='dark']):not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) .text-gray-800,
+body:not([data-theme='dark']):not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) .text-gray-900,
+body:not([data-theme='dark']):not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) h1,
+body:not([data-theme='dark']):not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) h2,
+body:not([data-theme='dark']):not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) h3,
+body:not([data-theme='dark']):not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) h4,
+body:not([data-theme='dark']):not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) h5,
+body:not([data-theme='dark']):not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) h6 {
+  color: #16222b !important; /* deep navy for readability */
+}
+
+body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) {
+  background: linear-gradient(135deg, #0a192f 0%, #172a45 50%, #144552 100%);
+  min-height: 100vh;
+  background-attachment: fixed;
+  background-size: cover;
+}
+
+/* White text for dark cards */
+.card.bg-dark,
+.card.bg-primary,
+.card.bg-secondary,
+.card.bg-dark *:not(.btn):not(.form-control):not(.form-select):not(.input-group-text) {
+    color: #fff !important;
+}
+
+/* Ensure form elements remain readable on dashboard pages */
+body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) .card .form-control,
+body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) .card .form-select,
+body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) .card .input-group-text {
+    color: #333 !important; /* Dark text for inputs on light backgrounds */
+}
+
+/* White text for form elements on auth pages */
+body.login-page .card .form-control,
+body.signup-page .card .form-control,
+body.forgot-page .card .form-control,
+body.reset-page .card .form-control,
+body.verify-page .card .form-control {
+    color: #fff !important; /* White text for auth page inputs */
+}
+
+/* Prevent autofill from changing background color on auth pages */
+body.login-page .card .form-control:-webkit-autofill,
+body.login-page .card .form-control:-webkit-autofill:hover,
+body.login-page .card .form-control:-webkit-autofill:focus,
+body.signup-page .card .form-control:-webkit-autofill,
+body.signup-page .card .form-control:-webkit-autofill:hover,
+body.signup-page .card .form-control:-webkit-autofill:focus,
+body.forgot-page .card .form-control:-webkit-autofill,
+body.forgot-page .card .form-control:-webkit-autofill:hover,
+body.forgot-page .card .form-control:-webkit-autofill:focus,
+body.reset-page .card .form-control:-webkit-autofill,
+body.reset-page .card .form-control:-webkit-autofill:hover,
+body.reset-page .card .form-control:-webkit-autofill:focus,
+body.verify-page .card .form-control:-webkit-autofill,
+body.verify-page .card .form-control:-webkit-autofill:hover,
+body.verify-page .card .form-control:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+    -webkit-text-fill-color: #fff !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Force specific elements to stay white */
+.card h1, .card h2, .card h3, .card h4, .card h5, .card h6,
+.card p, .card span, .card div, .card label {
+    color: #fff !important;
+}
+
+/* Exception for auth page navigation links */
+.card p .login-link,
+.card p .register-link {
+    color: #4a90e2 !important; /* Override white text for nav links */
+}
+
+.card p .login-link:hover,
+.card p .register-link:hover {
+    color: #357abd !important; /* Darker blue on hover */
+}
+
+/* Chart.js legend text color */
+.chartjs-legend .legend-text,
+.chartjs-legend .legend-item {
+    color: #fff !important;
+    fill: #fff !important;
+}
+
+/* Direct text color for legend items */
+.chartjs-legend * {
+    color: #fff !important;
+}
+
+/* Dashboard cards */
+.card:not(.glass) {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.card:not(.glass):hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+  background: rgba(34, 139, 87, 0.1);
+  border-bottom: 1px solid rgba(34, 139, 87, 0.2);
+  border-radius: 20px 20px 0 0 !important;
+}
+
+.btn-group .btn-primary {
+  background: linear-gradient(135deg, #52b788 0%, #2d6187 100%) !important;
+  border-color: transparent !important;   /* hide outline border, keep pill look */
+  color: #fff !important;                 /* white text */
+}

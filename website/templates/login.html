@@ -11,7 +11,7 @@
 <div class="d-flex justify-content-center align-items-center min-vh-100 py-5">
     <div class="card glass shadow-lg" style="max-width:420px; width:100%;">
         <div class="card-body p-4">
-            <h2 class="text-center mb-4">Welcome Back</h2>
+            <h2 class="text-center mb-4 text-white">Welcome Back</h2>
 
             <form method="POST">
                 <div class="form-group">
@@ -78,7 +78,7 @@
 
             <p class="small text-center mt-3">
                 Don't have an account?
-                <a href="{{ url_for('auth.signup') }}">Register</a>
+                <a href="{{ url_for('auth.signup') }}" class="register-link">Register</a>
             </p>
         </div>
     </div>

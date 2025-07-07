@@ -1,0 +1,176 @@
+/* Sidebar specific styles extracted from original styles.css */
+/* === vertical sidebar === */
+:root {
+  /* Adjust dropdown width here */
+  --plan-dropdown-width: 260px; /* ⬅️  change this value to make wider/narrower */
+}
+
+/* Smooth transitions for sidebar & layout */
+#sidebar {
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+body.with-sidebar {
+  transition: margin-left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+#sidebar{
+  width: 287px;
+  min-height: 100vh;
+  position: fixed;
+  left: 0; top: 0;
+  overflow: visible !important;
+  z-index: 1040;
+  background: linear-gradient(180deg, rgba(34, 139, 87, 0.95) 0%, rgba(0, 100, 148, 0.95) 50%, rgba(21, 67, 96, 0.95) 100%) !important;
+  backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body.with-sidebar{
+  margin-left: 287px;
+}
+
+#sidebar::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(255, 255, 255, 0.02);
+  pointer-events: none;
+}
+
+/* ======== Sidebar Header ======== */
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+.sidebar-header .logo-img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+.sidebar-header .sidebar-text {
+  color: #fff;
+  font-weight: 600;
+}
+
+.sidebar-header .email-white {
+  font-size: .75rem;
+  color: rgba(255,255,255,.85);
+}
+/* Plan dropdown anchor */
+#planDropdown {
+  color: #fff;
+  text-decoration: none;
+}
+#planDropdown .toggle-arrow {
+  color: rgba(255,255,255,.9);
+  font-size: 1rem;
+  transition: transform .3s;
+}
+#planDropdown[aria-expanded="true"] .toggle-arrow {
+  transform: rotate(180deg);
+}
+
+/* Navigation links */
+#sidebar .nav-link {
+  color: rgba(255, 255, 255, 0.8);
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  border-radius: 12px;
+  margin: 2px 8px;
+  padding: 12px 16px;
+  position: relative;
+  overflow: hidden;
+}
+#sidebar .nav-link:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  transform: translateX(4px);
+}
+#sidebar .nav-link.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(15px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* ======== Sidebar Footer ======== */
+.sidebar-footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  padding: 10px 15px;
+  text-align: right;
+}
+
+/* Sidebar footer button */
+#sidebar-toggle {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 24px;
+  transition: color 0.3s;
+}
+#sidebar-toggle:hover {
+  color: #fff;
+}
+#sidebar-toggle i {
+  transition: transform 0.3s ease-in-out;
+}
+
+/* Collapsed state */
+body.sidebar-collapsed #sidebar { width: 90px; }
+body.sidebar-collapsed #sidebar .sidebar-header .lh-sm,
+body.sidebar-collapsed #sidebar .nav-link span,
+body.sidebar-collapsed #sidebar .sidebar-text,
+body.sidebar-collapsed #sidebar .email-white { display: none; }
+body.sidebar-collapsed #sidebar .sidebar-header { justify-content: center !important; }
+body.sidebar-collapsed #sidebar .logo-img {
+  margin-right: 0 !important;
+  width: 32px;
+  height: 32px;
+}
+body.sidebar-collapsed #sidebar .toggle-arrow { display: none; }
+body.sidebar-collapsed #sidebar .nav-link { justify-content: center; }
+body.sidebar-collapsed #sidebar .dropdown { display: flex; justify-content: center; }
+body.sidebar-collapsed.with-sidebar { margin-left: 90px; }
+body.sidebar-collapsed #sidebar #sidebar-toggle i { transform: rotate(180deg); }
+
+/* Plan dropdown tweaks */
+#planDropdown::after { display: none; }
+#planDropdown { display: flex; align-items: center; justify-content: space-between; }
+#planDropdown h5 {
+  margin: 0;
+  color: #fff; /* plan name in white */
+}
+
+/* Plan dropdown menu */
+.plan-popup {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  width: var(--plan-dropdown-width); /* 🔧 edit variable above */
+  padding: 0;
+  margin-top: 10px !important;
+  max-height: 80vh; /* ⬅️ adjust for taller dropdown */
+  overflow-y: auto;
+  z-index: 1050;
+}
+
+.plan-popup .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .65rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #333;
+  border-left: 3px solid transparent;
+}
+
+.plan-popup .dropdown-item:hover {
+  background: rgba(34, 139, 87, 0.08);
+  border-left-color: #228b57;
+}
+
+#planDropdown .toggle-arrow { margin-left: .25rem; }
