@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from werkzeug.security import generate_password_hash 
 from flask_login import login_required, current_user
-from .models import Plan, BudgetCategory, Transaction
+from .models import BudgetCategory, Transaction, Plan, MonthlyBudget
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import func
 from . import db
@@ -23,7 +23,22 @@ def home():
     current_month = current_date.strftime('%B')
     current_year = current_date.year
     
-    # Get categories organized by main category
+    # Get categories organized by main category and ensure MonthlyBudget exists for each
+    # Create or fetch MonthlyBudget rows for the current month
+    categories = BudgetCategory.query.filter_by(plan_id=plan.id).all()
+    current_month_int = current_date.month
+
+    monthly_budgets_map = {}
+    for cat in categories:
+        mb = MonthlyBudget.query.filter_by(plan_id=plan.id, category_id=cat.id, month=current_month_int, year=current_year).first()
+        if not mb:
+            mb = MonthlyBudget(plan_id=plan.id, category_id=cat.id, month=current_month_int, year=current_year,
+                               assigned_amount=cat.assigned_amount, spent_amount=cat.spent_amount)
+            db.session.add(mb)
+            db.session.commit()
+        monthly_budgets_map[cat.id] = mb
+
+    # Organize categories by main category
     categories = BudgetCategory.query.filter_by(plan_id=plan.id).all()
     
     # Organize categories by main category
@@ -38,6 +53,14 @@ def home():
     total_spent = 0
     
     for category in categories:
+        # Use monthly budget values for assigned and spent
+        mb = monthly_budgets_map.get(category.id)
+        if mb:
+            category.assigned_amount = mb.assigned_amount
+            category.spent_amount = mb.spent_amount
+
+        # Update spent amount from transactions (ensure latest)
+
         # Update spent amount from transactions
         spent = db.session.query(func.sum(Transaction.amount)).filter_by(
             category_id=category.id
@@ -60,7 +83,11 @@ def home():
     
     # Calculate summary data
     available_amount = total_assigned - total_spent
-    
+
+    # Sort categories by spent amount for the summary panel
+    all_categories = sorted([cat for cat in categories if cat.spent_amount > 0], key=lambda x: x.spent_amount, reverse=True)
+    top_spending_categories = all_categories[:5]
+
     return render_template("home.html", 
                          plan=plan,
                          categories=organized_categories,
@@ -69,7 +96,38 @@ def home():
                          current_year=current_year,
                          total_assigned=total_assigned,
                          total_spent=total_spent,
-                         available_amount=available_amount)
+                         available_amount=available_amount,
+                         top_spending_categories=top_spending_categories)
+
+
+@views.route('/api/update-assigned', methods=['POST'])
+@login_required
+def update_assigned():
+    data = request.get_json()
+    category_id = data.get('category_id')
+    try:
+        amount = float(data.get('amount', 0))
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'message': 'Invalid amount value'}), 400
+    if category_id is None or amount is None:
+        return jsonify({'success': False, 'message': 'Invalid data'}), 400
+
+    category = BudgetCategory.query.get(category_id)
+    if not category:
+        return jsonify({'success': False, 'message': 'Category not found'}), 404
+
+    # Determine month/year
+    now = datetime.datetime.now()
+    mb = MonthlyBudget.query.filter_by(plan_id=category.plan_id, category_id=category_id, month=now.month, year=now.year).first()
+    if not mb:
+        mb = MonthlyBudget(plan_id=category.plan_id, category_id=category_id, month=now.month, year=now.year)
+        db.session.add(mb)
+
+    mb.assigned_amount = amount
+    category.assigned_amount = amount  # keep legacy field in sync
+
+    db.session.commit()
+    return jsonify({'success': True, 'assigned_amount': amount})
 
 @views.route('/api/update-category-amount', methods=['POST'])
 @login_required

@@ -1,22 +1,49 @@
 /* Gradient animated background for dashboard & home pages */
 
-/* Headings & base text colour for light theme */
-body:not([data-theme='dark']):not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) .text-gray-800,
-body:not([data-theme='dark']):not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) .text-gray-900,
-body:not([data-theme='dark']):not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) h1,
-body:not([data-theme='dark']):not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) h2,
-body:not([data-theme='dark']):not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) h3,
-body:not([data-theme='dark']):not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) h4,
-body:not([data-theme='dark']):not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) h5,
-body:not([data-theme='dark']):not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) h6 {
-  color: #16222b !important; /* deep navy for readability */
+/* Default text colors for dashboard pages with dark gradient background */
+body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) h1,
+body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) h2,
+body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) h3,
+body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) h4,
+body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) h5,
+body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) h6 {
+  color: #ffffff !important; /* white text for dark gradient background */
+}
+
+/* Ensure all text elements are visible on dark background */
+body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) .text-white,
+body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) .text-light,
+body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) .text-muted,
+body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) .text-primary,
+body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) .text-secondary,
+body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) .btn-link {
+  color: #ffffff !important;
+}
+
+/* Specific rule for small text elements */
+body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) small {
+  color: #e0e0e0 !important;
 }
 
 body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) {
-  background: linear-gradient(135deg, #0a192f 0%, #172a45 50%, #144552 100%);
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 25%, #0f3460 50%, #533483 75%, #764ba2 100%);
   min-height: 100vh;
   background-attachment: fixed;
   background-size: cover;
+  animation: gradientShift 8s ease infinite;
+}
+
+/* Add animated gradient effect */
+@keyframes gradientShift {
+  0% {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 25%, #0f3460 50%, #533483 75%, #764ba2 100%);
+  }
+  50% {
+    background: linear-gradient(135deg, #0f3460 0%, #1a1a2e 25%, #533483 50%, #764ba2 75%, #16213e 100%);
+  }
+  100% {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 25%, #0f3460 50%, #533483 75%, #764ba2 100%);
+  }
 }
 
 /* White text for dark cards */

@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from .models import Plan
+from .models import Plan, BudgetCategory
 from . import db
 
 onboard = Blueprint("onboard", __name__)
@@ -37,7 +37,25 @@ def show_form():
             user_id=current_user.id
         )
         db.session.add(new_plan)
-        db.session.flush() # Use flush to get the new_plan.id before commit
+        db.session.flush()  # Use flush to get the new_plan.id before commit
+
+        # Create BudgetCategory objects from subcategories
+        category_mapping = {
+            'needs': (needs_sub, 'needs'),
+            'wants': (wants_sub, 'wants'),
+            'savings': (saving_sub, 'investments')  # Map 'savings' from form to 'investments'
+        }
+
+        for form_key, (sub_list, main_cat_name) in category_mapping.items():
+            for sub_name in sub_list:
+                if sub_name.strip():
+                    new_cat = BudgetCategory(
+                        name=sub_name.strip(),
+                        main_category=main_cat_name,
+                        assigned_amount=0,  # Default to 0, user assigns on home page
+                        plan_id=new_plan.id
+                    )
+                    db.session.add(new_cat)
 
         # Set as active plan and mark profile as complete if it's the first time
         current_user.active_plan_id = new_plan.id

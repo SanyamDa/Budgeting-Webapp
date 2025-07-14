@@ -43,6 +43,27 @@ class BudgetCategory(db.Model):
             return 0
         return min((self.spent_amount / self.assigned_amount) * 100, 100)
 
+# Monthly budget information per category for each month
+class MonthlyBudget(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    month = db.Column(db.Integer, nullable=False)  # 1-12
+    year = db.Column(db.Integer, nullable=False)
+
+    assigned_amount = db.Column(db.Float, default=0.0)
+    spent_amount = db.Column(db.Float, default=0.0)
+
+    # Foreign keys
+    category_id = db.Column(db.Integer, db.ForeignKey('budget_category.id'), nullable=False)
+    plan_id = db.Column(db.Integer, db.ForeignKey('plan.id'), nullable=False)
+
+    # Relationships
+    category = db.relationship('BudgetCategory', backref=db.backref('monthly_budgets', lazy=True, cascade="all, delete-orphan"))
+    plan = db.relationship('Plan', backref=db.backref('monthly_budgets', lazy=True, cascade="all, delete-orphan"))
+
+    @property
+    def available_amount(self):
+        return self.assigned_amount - self.spent_amount
+
 # Transaction model
 class Transaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)

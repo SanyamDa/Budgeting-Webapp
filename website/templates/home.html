@@ -8,20 +8,20 @@
     <div class="row mb-4">
         <div class="col-md-6">
             <div class="d-flex align-items-center">
-                <button class="btn btn-link text-primary mr-2" id="prevMonth">
+                <button class="btn btn-link text-light mr-2" id="prevMonth">
                     <i class="bx bx-chevron-left"></i>
                 </button>
                 <h4 class="mb-0 text-white">{{ current_month }} {{ current_year }}</h4>
-                <button class="btn btn-link text-primary ml-2" id="nextMonth">
+                <button class="btn btn-link text-light ml-2" id="nextMonth">
                     <i class="bx bx-chevron-right"></i>
                 </button>
             </div>
-            <small class="text-muted">Enter a note...</small>
+            <small class="text-light">Enter a note...</small>
         </div>
         <div class="col-md-6 text-right">
-            <div class="card bg-light d-inline-block px-4 py-2">
-                <h5 class="mb-0 text-dark">${{ "%.2f"|format(total_assigned) }}</h5>
-                <small class="text-muted">All Money Assigned</small>
+            <div class="card d-inline-block px-4 py-2" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px;">
+                <h1 class="text-white" style="font-size: 2rem; font-weight: 600;">${{ "{:.2f}".format(plan.monthly_income) }}</h1>
+                <small class="text-light">All Money Assigned</small>
                 <i class="bx bx-check-circle text-success ml-2"></i>
             </div>
         </div>
@@ -107,7 +107,7 @@
             </div>
 
             <!-- Budget Categories Table -->
-            <div class="card shadow-sm" style="background: rgba(30, 30, 45, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; overflow: hidden;">
+            <div class="card shadow-sm" style="background: rgba(20, 20, 35, 0.85); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; overflow: hidden; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);">
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover mb-0" style="color: #e0e0e0; margin-bottom: 0; border-collapse: separate; border-spacing: 0;">
@@ -121,73 +121,85 @@
                             </thead>
                             <tbody>
                                 <!-- Needs Category -->
-                                <tr class="category-header" data-category="needs" style="background-color: rgba(0, 0, 0, 0.25); transition: background-color 0.2s ease; cursor: pointer;">
-                                    <td colspan="4" style="border-bottom: 1px solid rgba(255,255,255,0.08) !important; padding: 0;">
-                                        <div class="d-flex justify-content-between align-items-center py-3 px-4">
-                                            <div class="d-flex align-items-center">
-                                                <i class="bx bx-chevron-down mr-3 text-white transition-transform" style="font-size: 1.1rem;"></i>
-                                                <div>
-                                                    <h6 class="mb-0 text-white" style="font-weight: 600; font-size: 0.95rem;">Needs</h6>
-                                                    <small class="text-muted" style="font-size: 0.75rem;">Essential expenses</small>
-                                                </div>
-                                            </div>
-                                            <div class="d-flex align-items-center">
-                                                <div class="text-right mr-4">
-                                                    <div class="text-white" style="font-size: 0.9rem; font-weight: 500;">$0.00</div>
-                                                    <small class="text-muted" style="font-size: 0.7rem;">Assigned</small>
-                                                </div>
-                                                <div class="text-right mr-4">
-                                                    <div class="text-white" style="font-size: 0.9rem; font-weight: 500;">$0.00</div>
-                                                    <small class="text-muted" style="font-size: 0.7rem;">Spent</small>
-                                                </div>
-                                                <div class="text-right">
-                                                    <span class="badge px-3 py-2" style="background: rgba(255, 255, 255, 0.1); color: #fff; font-weight: 500; font-size: 0.8rem; border-radius: 6px;">
-                                                        $0.00
-                                                    </span>
-                                                    <div class="mt-1">
-                                                        <small class="text-success" style="font-size: 0.65rem; font-weight: 500;">
-                                                            <i class='bx bx-check-circle mr-1'></i> On track
-                                                        </small>
-                                                    </div>
-                                                </div>
+                                <tr class="category-header" data-category="needs" style="cursor: pointer;">
+                                    <td class="py-3 px-4">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bx bx-chevron-down category-toggle mr-3" style="font-size: 1rem;"></i>
+                                            <div>
+                                                <h6 class="mb-0 text-white" style="font-size: 0.9rem;">Needs</h6>
+                                                
                                             </div>
                                         </div>
                                     </td>
+                                    <td class="text-right py-3 px-4"><span style="font-size: 0.9rem; font-weight: 500;">${{ "%.2f"|format(category_totals.needs.assigned) }}</span></td>
+                                    <td class="text-right py-3 px-4"><span style="font-size: 0.9rem; font-weight: 500;">${{ "%.2f"|format(category_totals.needs.spent) }}</span></td>
+                                    <td class="text-right py-3 px-4"><span class="badge px-3 py-2" style="background: rgba(255, 255, 255, 0.1); font-size: 0.8rem;">${{ "%.2f"|format(category_totals.needs.available) }}</span></td>
                                 </tr>
-                                
-                                <!-- Wants Category -->
-                                <tr class="category-header" data-category="wants" style="background-color: rgba(0, 0, 0, 0.2);">
-                                    <td colspan="4" style="border-bottom: 1px solid rgba(255,255,255,0.1) !important;">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <span>
-                                                <i class="bx bx-chevron-down mr-2 text-white"></i>
-                                                <strong class="text-white">Wants</strong>
-                                            </span>
-                                            <div class="text-right">
-                                                <span class="mr-3 text-white"><strong>$0.00</strong></span>
-                                                <span class="mr-3 text-white"><strong>$0.00</strong></span>
-                                                <span class="badge" style="background: rgba(255, 255, 255, 0.15); color: #fff;"><strong>$0.00</strong></span>
-                                            </div>
-                                        </div>
+                                <!-- Needs Subcategories -->
+                                {% for category in categories.needs %}
+                                <tr class="subcategory-row needs-subcategory" style="background-color: rgba(255, 255, 255, 0.03);">
+                                    <td class="py-2 px-4" style="padding-left: 2.5rem !important;">
+                                        <span style="font-size: 0.85rem;">{{ category.name }}</span>
                                     </td>
+                                    <td class="text-right py-2 px-4"><span class="editable-amount" data-category-id="{{ category.id }}" style="font-size: 0.85rem; cursor: pointer;">${{ "%.2f"|format(category.assigned_amount) }}</span></td>
+                                    <td class="text-right py-2 px-4"><span style="font-size: 0.85rem;">${{ "%.2f"|format(category.spent_amount) }}</span></td>
+                                    <td class="text-right py-2 px-4"><span class="{% if category.available_amount < 0 %}text-danger{% else %}text-white-50{% endif %}" style="font-size: 0.85rem;">${{ "%.2f"|format(category.available_amount) }}</span></td>
                                 </tr>
+                                {% endfor %}
 
-                                <!-- Investment Category -->
-                                <tr class="category-header" data-category="investment" style="background-color: rgba(0, 0, 0, 0.2);">
-                                    <td colspan="4" style="border-bottom: 1px solid rgba(255,255,255,0.1) !important;">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <span>
-                                                <i class="bx bx-chevron-down mr-2 text-white"></i>
-                                                <strong class="text-white">Investment</strong>
-                                            </span>
-                                            <div class="text-right">
-                                                <span class="mr-3 text-white"><strong>$0.00</strong></span>
-                                                <span class="mr-3 text-white"><strong>$0.00</strong></span>
-                                                <span class="badge" style="background: rgba(255, 255, 255, 0.15); color: #fff;"><strong>$0.00</strong></span>
+                                <!-- Wants Category -->
+                                <tr class="category-header" data-category="wants" style="cursor: pointer;">
+                                    <td class="py-3 px-4">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bx bx-chevron-down category-toggle mr-3" style="font-size: 1rem;"></i>
+                                            <div>
+                                                <h6 class="mb-0 text-white" style="font-size: 0.9rem;">Wants</h6>
+                                                
                                             </div>
                                         </div>
                                     </td>
+                                    <td class="text-right py-3 px-4"><span style="font-size: 0.9rem; font-weight: 500;">${{ "%.2f"|format(category_totals.wants.assigned) }}</span></td>
+                                    <td class="text-right py-3 px-4"><span style="font-size: 0.9rem; font-weight: 500;">${{ "%.2f"|format(category_totals.wants.spent) }}</span></td>
+                                    <td class="text-right py-3 px-4"><span class="badge px-3 py-2" style="background: rgba(255, 255, 255, 0.1); font-size: 0.8rem;">${{ "%.2f"|format(category_totals.wants.available) }}</span></td>
                                 </tr>
+                                <!-- Wants Subcategories -->
+                                {% for category in categories.wants %}
+                                <tr class="subcategory-row wants-subcategory" style="background-color: rgba(255, 255, 255, 0.03);">
+                                    <td class="py-2 px-4" style="padding-left: 2.5rem !important;">
+                                        <span style="font-size: 0.85rem;">{{ category.name }}</span>
+                                    </td>
+                                    <td class="text-right py-2 px-4"><span class="editable-amount" data-category-id="{{ category.id }}" style="font-size: 0.85rem; cursor: pointer;">${{ "%.2f"|format(category.assigned_amount) }}</span></td>
+                                    <td class="text-right py-2 px-4"><span style="font-size: 0.85rem;">${{ "%.2f"|format(category.spent_amount) }}</span></td>
+                                    <td class="text-right py-2 px-4"><span class="{% if category.available_amount < 0 %}text-danger{% else %}text-white-50{% endif %}" style="font-size: 0.85rem;">${{ "%.2f"|format(category.available_amount) }}</span></td>
+                                </tr>
+                                {% endfor %}
+
+                                <!-- Investments Category -->
+                                <tr class="category-header" data-category="investments" style="cursor: pointer;">
+                                    <td class="py-3 px-4">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bx bx-chevron-down category-toggle mr-3" style="font-size: 1rem;"></i>
+                                            <div>
+                                                <h6 class="mb-0 text-white" style="font-size: 0.9rem;">Investments</h6>
+                                                
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-right py-3 px-4"><span style="font-size: 0.9rem; font-weight: 500;">${{ "%.2f"|format(category_totals.investments.assigned) }}</span></td>
+                                    <td class="text-right py-3 px-4"><span style="font-size: 0.9rem; font-weight: 500;">${{ "%.2f"|format(category_totals.investments.spent) }}</span></td>
+                                    <td class="text-right py-3 px-4"><span class="badge px-3 py-2" style="background: rgba(255, 255, 255, 0.1); font-size: 0.8rem;">${{ "%.2f"|format(category_totals.investments.available) }}</span></td>
+                                </tr>
+                                <!-- Investments Subcategories -->
+                                {% for category in categories.investments %}
+                                <tr class="subcategory-row investments-subcategory" style="background-color: rgba(255, 255, 255, 0.03);">
+                                    <td class="py-2 px-4" style="padding-left: 2.5rem !important;">
+                                        <span style="font-size: 0.85rem;">{{ category.name }}</span>
+                                    </td>
+                                    <td class="text-right py-2 px-4"><span class="editable-amount" data-category-id="{{ category.id }}" style="font-size: 0.85rem; cursor: pointer;">${{ "%.2f"|format(category.assigned_amount) }}</span></td>
+                                    <td class="text-right py-2 px-4"><span style="font-size: 0.85rem;">${{ "%.2f"|format(category.spent_amount) }}</span></td>
+                                    <td class="text-right py-2 px-4"><span class="{% if category.available_amount < 0 %}text-danger{% else %}text-white-50{% endif %}" style="font-size: 0.85rem;">${{ "%.2f"|format(category.available_amount) }}</span></td>
+                                </tr>
+                                {% endfor %}
                             </tbody>
                         </table>
                     </div>
@@ -197,44 +209,44 @@
 
         <!-- Right Panel: Month Summary -->
         <div class="col-lg-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h6 class="mb-0">
+            <div class="card shadow-sm" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);">
+                <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px 16px 0 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                    <h6 class="mb-0 text-white">
                         <i class="bx bx-calendar mr-2"></i>
                         {{ current_month }}'s Summary
                         <i class="bx bx-chevron-down ml-auto"></i>
                     </h6>
                 </div>
-                <div class="card-body">
+                <div class="card-body" style="color: #e0e0e0;">
                     <div class="mb-4">
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Left Over from Last Month</span>
-                            <span>$0.00</span>
+                            <span class="text-light">Left Over from Last Month</span>
+                            <span class="text-white">$0.00</span>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Assigned in {{ current_month }}</span>
-                            <span>${{ "%.2f"|format(total_assigned) }}</span>
+                            <span class="text-light">Assigned in {{ current_month }}</span>
+                            <span class="text-white">${{ "%.2f"|format(total_assigned) }}</span>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Activity</span>
+                            <span class="text-light">Activity</span>
                             <span class="text-danger">-${{ "%.2f"|format(total_spent) }}</span>
                         </div>
-                        <hr>
+                        <hr style="border-color: rgba(255, 255, 255, 0.3);">
                         <div class="d-flex justify-content-between mb-3">
-                            <span class="text-muted">Available</span>
+                            <span class="text-light">Available</span>
                             <span class="text-success font-weight-bold">${{ "%.2f"|format(available_amount) }}</span>
                         </div>
                     </div>
 
                     <div class="mb-4">
-                        <h6 class="text-muted mb-3">Cost to Be Me</h6>
+                        <h6 class="text-light mb-3">Cost to Be Me</h6>
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">{{ current_month }}'s Targets</span>
-                            <span>$200.00</span>
+                            <span class="text-light">{{ current_month }}'s Targets</span>
+                            <span class="text-white">$200.00</span>
                         </div>
                         <div class="d-flex justify-content-between mb-3">
-                            <span class="text-muted">Expected Income</span>
-                            <span>${{ "%.2f"|format(plan.monthly_income or 0) }} <i class="bx bx-edit text-muted"></i></span>
+                            <span class="text-light">Expected Income</span>
+                            <span class="text-white">${{ "%.2f"|format(plan.monthly_income or 0) }} <i class="bx bx-edit text-light"></i></span>
                         </div>
                     </div>
                 </div>
@@ -277,6 +289,180 @@
         </div>
     </div>
 </div>
+
+<script>
+// Category toggle functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Dropdown toggle for budget categories
+    const categoryHeaders = document.querySelectorAll('.category-header');
+    categoryHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+            const category = this.dataset.category;
+            const subcategoryRows = document.querySelectorAll(`.subcategory-row.${category}-subcategory`);
+            const icon = this.querySelector('.category-toggle');
+
+            let anyHidden = false;
+            subcategoryRows.forEach(row => {
+                row.classList.toggle('d-none');
+                if (row.classList.contains('d-none')) anyHidden = true;
+            });
+
+            // Update icon based on new state (hidden -> right, shown -> down)
+            if (icon) {
+                if (anyHidden) {
+                    icon.classList.remove('bx-chevron-down');
+                    icon.classList.add('bx-chevron-right');
+                } else {
+                    icon.classList.remove('bx-chevron-right');
+                    icon.classList.add('bx-chevron-down');
+                }
+            }
+        });
+    });
+    
+    // Editable amount functionality
+    let currentCategoryId = null;
+    let currentAmountElement = null;
+
+    /* ---------- OPEN ALL CATEGORIES ON INITIAL LOAD ---------- */
+    // Show every sub-category row
+    document.querySelectorAll('.subcategory-row').forEach(row => {
+        row.classList.remove('d-none');      // remove possible hidden class
+        row.style.display = 'table-row';     // guarantee visibility
+    });
+    // Make sure each chevron points down
+    document.querySelectorAll('.category-toggle').forEach(icon => {
+        icon.classList.remove('bx-chevron-right', 'rotate-90');
+        icon.classList.add('bx-chevron-down');
+    });
+    /* --------------------------------------------------------- */
+    
+    // Editable amount functionality
+    
+    document.querySelectorAll('.editable-amount').forEach(element => {
+        element.addEventListener('click', function() {
+            currentCategoryId = this.dataset.categoryId;
+            currentAmountElement = this;
+            
+            // Get category name from the row
+            const categoryName = this.closest('tr').querySelector('span').textContent;
+            const currentAmount = parseFloat(this.textContent.replace('$', ''));
+            
+            // Populate modal
+            document.getElementById('categoryName').value = categoryName;
+            document.getElementById('assignedAmount').value = currentAmount;
+            
+            // Show modal
+            $('#editAmountModal').modal('show');
+        });
+    });
+    
+    // Save amount functionality
+    document.getElementById('saveAmountBtn').addEventListener('click', function() {
+        const newAmount = parseFloat(document.getElementById('assignedAmount').value);
+        
+        if (isNaN(newAmount) || newAmount < 0) {
+            alert('Please enter a valid amount');
+            return;
+        }
+        
+        // Show loading state
+        const saveBtn = this;
+        const originalText = saveBtn.textContent;
+        saveBtn.textContent = 'Saving...';
+        saveBtn.disabled = true;
+        
+        // Make API call
+        fetch('/api/update-assigned', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                category_id: currentCategoryId,
+                amount: newAmount
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update the display
+                currentAmountElement.textContent = '$' + newAmount.toFixed(2);
+                
+                // Show success message
+                showToast('Amount updated successfully!', 'success');
+                
+                // Close modal
+                $('#editAmountModal').modal('hide');
+                
+                // Refresh the page to update totals
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showToast('Error updating amount: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error updating amount', 'error');
+        })
+        .finally(() => {
+            saveBtn.textContent = originalText;
+            saveBtn.disabled = false;
+        });
+    });
+    
+    // Filter functionality
+    document.querySelectorAll('.filter-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            // Remove active class from all buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+                btn.style.opacity = '0.7';
+            });
+            
+            // Add active class to clicked button
+            this.classList.add('active');
+            this.style.opacity = '1';
+            
+            const filter = this.dataset.filter;
+            
+            // Filter logic here (implement based on your needs)
+            // For now, just show all categories
+            document.querySelectorAll('.category-header').forEach(header => {
+                header.style.display = 'table-row';
+            });
+        });
+    });
+});
+
+// Toast notification function
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+    toast.style.position = 'fixed';
+    toast.style.top = '20px';
+    toast.style.right = '20px';
+    toast.style.zIndex = '1055';
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="bx ${type === 'success' ? 'bx-check-circle' : 'bx-x-circle'} mr-2"></i>
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+</script>
 
 <style>
 /* Ripple effect for buttons */
@@ -478,7 +664,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const category = this.dataset.category;
             const chevron = this.querySelector('.bx-chevron-down, .bx-chevron-right');
-            const subcategories = document.querySelectorAll(`[data-main-category="${category}"]`);
+            const subcategories = document.querySelectorAll(`.subcategory-row.${category}-subcategory`);
+
             
             // Toggle chevron with rotation animation
             chevron.classList.toggle('rotate-90');
@@ -653,7 +840,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showLoading(this, true);
         
         // Send update to backend
-        fetch('/api/update-category-amount', {
+        fetch('/api/update-assigned', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

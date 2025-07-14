@@ -16,7 +16,7 @@
   .step-dot{width:10px;height:10px;border-radius:50%;background:#fff;opacity:.25;margin:.15rem;}
   .step-dot.active{opacity:1;}
   /* tiny tag for sub-category delete */
-  .pill{background:#e2e8f0;border-radius:1rem;padding:.15rem .65rem;display:inline-flex;align-items:center;margin:.15rem .35rem;}
+  .pill{background:#e2e8f0;border-radius:1rem;padding:.15rem .65rem;display:inline-flex;align-items:center;margin:.15rem .35rem;color:#000;}
   .pill i{cursor:pointer;margin-left:.25rem;color:#dc3545;}
   .wizard-step{display:none;}
 </style>
@@ -60,8 +60,8 @@
               <input type="number" name="wants" value="30" min="0" max="100" class="form-control ratio-input" required>
             </div>
             <div class="col-4">
-              <label class="small">Savings %</label>
-              <input type="number" name="savings" value="20" min="0" max="100" class="form-control ratio-input" required>
+              <label class="small">Investments %</label>
+              <input type="number" name="investments" value="20" min="0" max="100" class="form-control ratio-input" required>
             </div>
           </div>
           <p class="small text-center mt-2" id="ratioWarn" style="display:none;color:#ffc107;">Ratios must sum to 100 %</p>
