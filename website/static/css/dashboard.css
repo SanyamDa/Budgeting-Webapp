@@ -1,5 +1,10 @@
 /* Gradient animated background for dashboard & home pages */
 
+/* Default text color for pages with dark background */
+body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) {
+  color: #ffffff;
+}
+
 /* Default text colors for dashboard pages with dark gradient background */
 body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) h1,
 body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.verify-page) h2,
@@ -67,7 +72,11 @@ body.signup-page .card .form-control,
 body.forgot-page .card .form-control,
 body.reset-page .card .form-control,
 body.verify-page .card .form-control {
-    color: #fff !important; /* White text for auth page inputs */
+    color: var(--color-text-primary);
+}
+
+:root {
+    color: var(--color-text-primary);
 }
 
 /* Prevent autofill from changing background color on auth pages */
@@ -91,6 +100,52 @@ body.verify-page .card .form-control:-webkit-autofill:focus {
     background-color: transparent !important;
     background-image: none !important;
     transition: background-color 5000s ease-in-out 0s;
+}
+
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.top-bar .month-selector,
+.top-bar .total-assigned-card {
+    background-color: var(--color-bg-secondary);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+    padding: 1rem;
+}
+
+.top-bar .month-selector .btn-nav {
+  color: var(--color-text-primary);
+}
+
+.top-bar .total-assigned-card h5 {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.top-bar .total-assigned-card p {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.main-content-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+    padding: 1rem;
+}
+
+.main-content {
+    color: #fff !important; /* White text for auth page inputs */
 }
 
 /* Force specific elements to stay white */
@@ -143,8 +198,195 @@ body.verify-page .card .form-control:-webkit-autofill:focus {
   border-radius: 20px 20px 0 0 !important;
 }
 
+.right-panel .summary-card {
+    background-color: var(--color-bg-secondary);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+}
+
+.right-panel .summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    margin-bottom: 1rem;
+}
+
+.right-panel .summary-header h5 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.right-panel .summary-body .summary-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    font-size: 0.95rem;
+}
+
+.right-panel .summary-body .summary-item .amount {
+    font-weight: 500;
+}
+
+
+
+.right-panel .summary-body hr {
+    border: none;
+    border-top: 1px solid var(--color-border);
+    margin: 0.5rem 0;
+}
+
+.right-panel .summary-body .summary-total {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.budget-table-container {
+  background-color: var(--color-surface, rgba(255, 255, 255, 0.05));
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  overflow: hidden; /* This is important for the border-radius to work */
+}
+
+.budget-table {
+  width: 100%;
+  border-collapse: collapse;
+  /* The table itself should not have a border */
+}
+
+.budget-table th, .budget-table td {
+  padding: 1rem;
+  text-align: left;
+  vertical-align: middle;
+  /* Apply a bottom border to all cells */
+  border-bottom: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+}
+
+/* Remove the border from the cells of the VERY LAST row */
+.budget-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.budget-table th {
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+
+/* Set column widths for a balanced layout */
+.budget-table .col-category {
+    width: 40%;
+}
+
+.budget-table .col-assigned,
+.budget-table .col-activity,
+.budget-table .col-available {
+    width: 20%;
+}
+
+/* Center-align the numeric columns */
+.budget-table .col-assigned,
+.budget-table .col-activity,
+.budget-table .col-available {
+    text-align: center !important;
+}
+
+
+.budget-table .pl-4 {
+    padding-left: 2.5rem;
+}
+
+
+
+.main-category-row {
+    cursor: pointer;
+    font-size: 1.05rem;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.main-category-row:hover {
+    background-color: var(--color-bg-hover);
+}
+
+.sub-category-row {
+    font-size: 0.95rem;
+    background-color: transparent;
+}
+
+.toggle-icon {
+    margin-right: 15px;
+    transition: transform 0.3s ease;
+    color: var(--color-text-secondary);
+}
+
+.main-category-row[data-target].collapsed .toggle-icon {
+    transform: rotate(-90deg);
+}
+
+.row-checkbox {
+    margin-right: 0.75rem;
+}
+
+.assigned-value {
+    cursor: pointer;
+}
+
+.assigned-value:hover, .assigned-value:focus {
+    background-color: var(--color-bg-tertiary);
+    outline: none;
+    border-radius: 4px;
+}
+
+.money-badge {
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.money-badge.positive {
+    background-color: rgba(22, 163, 74, 0.1);
+    color: #16a34a;
+}
+
+.money-badge.zero {
+    background-color: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+}
+
+.money-badge.negative {
+    background-color: rgba(220, 38, 38, 0.1);
+    color: #dc2626;
+}
+
+
+
 .btn-group .btn-primary {
   background: linear-gradient(135deg, #52b788 0%, #2d6187 100%) !important;
   border-color: transparent !important;   /* hide outline border, keep pill look */
   color: #fff !important;                 /* white text */
+}
+
+.arrow-link.disabled {
+  pointer-events: none;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* kill Bootstrap’s spacer row at the bottom of tables */
+.budget-table tbody::after,
+.budget-table tbody::before {   /* Bootstrap 5 uses ::after, 4 uses ::before */
+    display: none !important;
+    content: none !important;
+    height: 0 !important;
+}
+
+.budget-table tr.collapse:not(.show) {
+  display: none !important;
 }

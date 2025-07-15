@@ -1,6 +1,7 @@
 from . import db
 from flask_login import UserMixin
 from sqlalchemy.sql import func
+from sqlalchemy.sql import func
 from sqlalchemy.types import JSON
 
 # Note model remains the same
@@ -64,6 +65,19 @@ class MonthlyBudget(db.Model):
     def available_amount(self):
         return self.assigned_amount - self.spent_amount
 
+# Rollover model to store leftover money from a month
+class MonthlyRollover(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    month = db.Column(db.Integer, nullable=False)
+    year = db.Column(db.Integer, nullable=False)
+    amount = db.Column(db.Float, default=0.0)
+
+    # Foreign keys
+    plan_id = db.Column(db.Integer, db.ForeignKey('plan.id'), nullable=False)
+
+    # Relationships
+    plan = db.relationship('Plan', backref=db.backref('rollovers', lazy=True, cascade="all, delete-orphan"))
+
 # Transaction model
 class Transaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -84,6 +98,7 @@ class User(db.Model, UserMixin):
     password   = db.Column(db.String(150))
     first_name = db.Column(db.String(150))
     last_name  = db.Column(db.String(150))
+    date_created = db.Column(db.DateTime(timezone=True), default=func.now())
 
     # Foreign key to the currently active plan
     active_plan_id = db.Column(db.Integer, db.ForeignKey('plan.id'), nullable=True)
