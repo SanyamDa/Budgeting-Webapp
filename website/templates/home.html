@@ -10,12 +10,20 @@
     <!-- Month Selector and Totals -->
     <div class="top-bar">
         <div class="month-selector">
-            <a href="{{ url_for('views.home', year=prev_year, month=prev_month) }}" class="btn btn-nav"><i class='bx bx-chevron-left'></i></a>
+            {% if can_go_prev %}
+                <a href="{{ url_for('views.home', year=prev_year, month=prev_month) }}" class="btn btn-nav"><i class='bx bx-chevron-left'></i></a>
+            {% else %}
+                <span class="btn btn-nav disabled"><i class='bx bx-chevron-left'></i></span>
+            {% endif %}
             <span class="current-month">{{ current_month }} {{ current_year }}</span>
-            <a href="{{ url_for('views.home', year=next_year, month=next_month) }}" class="btn btn-nav"><i class='bx bx-chevron-right'></i></a>
+            {% if can_go_next %}
+                <a href="{{ url_for('views.home', year=next_year, month=next_month) }}" class="btn btn-nav"><i class='bx bx-chevron-right'></i></a>
+            {% else %}
+                <span class="btn btn-nav disabled"><i class='bx bx-chevron-right'></i></span>
+            {% endif %}
         </div>
         <div class="total-assigned-card">
-            <h5 class="card-title">Money Assigned</h5>
+            <h5 class="card-title">Money Remaining</h5>
             <p class="card-text">${{ "%.2f"|format(available_amount) }}</p>
         </div>
     </div>
@@ -50,7 +58,7 @@
                         <td class="pl-4">
                             {{ sub.name }}
                         </td>
-                        <td class="col-assigned assigned-value" data-id="{{ sub.id }}" contenteditable="true">${{ "%.2f"|format(sub.assigned_amount) }}</td>
+                        <td class="col-assigned assigned-value" data-category-id="{{ sub.id }}" data-current-amount="{{ sub.assigned_amount }}" data-category-name="{{ sub.name }}" style="cursor:pointer;">${{ "%.2f"|format(sub.assigned_amount) }}</td>
                         <td class="col-activity">${{ "%.2f"|format(sub.spent_amount) }}</td>
                         <td class="col-available">
                             <span class="money-badge {% if sub.available_amount > 0 %}positive{% elif sub.available_amount == 0 %}zero{% else %}negative{% endif %}">
@@ -71,14 +79,14 @@
                     <span class="toggle-icon">
                         <i class="bx bx-chevron-down"></i>
                     </span>
-
                 </div>
+                <hr class="summary-divider">
                 <div class="summary-body">
                     <div class="summary-item">
                         <span>Left Over from Last Month</span>
                         <span class="amount">${{ "%.2f"|format(rollover_amount) }}</span>
                     </div>
-                    <div class="summary-item">
+                    <div class="summary-item" id="assigned-this-month">
                         <span>Assigned in {{ current_month }}</span>
                         <span class="amount">${{ "%.2f"|format(total_assigned) }}</span>
                     </div>
@@ -86,7 +94,7 @@
                         <span>Activity</span>
                         <span class="amount">-${{ "%.2f"|format(total_spent) }}</span>
                     </div>
-                    <hr>
+                    <hr class="summary-divider">
                     <div class="summary-item summary-total">
                         <span>Available</span>
                         <span class="amount">${{ "%.2f"|format(available_amount) }}</span>
@@ -102,31 +110,33 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Edit Assigned Amount</h5>
+                <h5 class="modal-title" style="color: #000000 !important; font-weight: bold;">Assign Values</h5>
                 <button type="button" class="close" data-dismiss="modal">
                     <span>&times;</span>
                 </button>
             </div>
             <div class="modal-body">
-                <form id="editAmountForm">
+                <form id="editAmountForm" action="{{ url_for('views.update_budget_form') }}" method="POST">
                     <div class="form-group">
-                        <label for="categoryName">Category</label>
-                        <input type="text" class="form-control" id="categoryName" readonly>
+                        <div class="p-3 mb-3" style="background-color: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
+                            <strong id="categoryName" style="color: #495057;">Category Name</strong>
+                        </div>
                     </div>
                     <div class="form-group">
-                        <label for="assignedAmount">Assigned Amount</label>
+                        <label for="assignedAmount" style="font-weight: 500; color: #495057;">Amount to Assign</label>
                         <div class="input-group">
                             <div class="input-group-prepend">
                                 <span class="input-group-text">$</span>
                             </div>
-                            <input type="number" class="form-control" id="assignedAmount" step="0.01" min="0">
+                            <input type="number" class="form-control" id="assignedAmount" name="amount" step="0.01" min="0" placeholder="0.00" required>
                         </div>
                     </div>
+                    <input type="hidden" id="categoryIdInput" name="category_id" value="">
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="saveAmountBtn">Save</button>
+                <button type="submit" form="editAmountForm" class="btn btn-primary" id="saveAmountBtn">Save</button>
             </div>
         </div>
     </div>
@@ -199,81 +209,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Save amount functionality
-    document.getElementById('saveAmountBtn').addEventListener('click', function() {
-        const newAmount = parseFloat(document.getElementById('assignedAmount').value);
-        
-        if (isNaN(newAmount) || newAmount < 0) {
-            alert('Please enter a valid amount');
-            return;
-        }
-        
-        // Show loading state
-        const saveBtn = this;
-        const originalText = saveBtn.textContent;
-        saveBtn.textContent = 'Saving...';
-        saveBtn.disabled = true;
-        
-        // Make API call
-        fetch('/api/update-category-amount', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                category_id: currentCategoryId,
-                amount: newAmount
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // --- 1. Update Subcategory Row ---
-                const subcatElement = document.querySelector(`[data-category-id="${data.updated_subcategory.id}"]`);
-                if (subcatElement) {
-                    const subcatRow = subcatElement.closest('tr');
-                    const oldAmount = parseFloat(subcatElement.dataset.currentAmount || 0);
-
-                    // Update assigned amount
-                    subcatElement.textContent = `$${data.updated_subcategory.new_amount.toFixed(2)}`;
-                    subcatElement.dataset.currentAmount = data.updated_subcategory.new_amount;
-                    
-                    // Update available amount
-                    const availableCell = subcatRow.querySelector('.col-available .money-badge');
-                    availableCell.textContent = `$${data.updated_subcategory.available_amount.toFixed(2)}`;
-                    availableCell.className = `money-badge ${data.updated_subcategory.available_amount >= 0 ? 'positive' : 'negative'}`;
-
-                    // --- 2. Update Parent Category Row ---
-                    const parentName = data.updated_parent_category.name;
-                    const parentRow = document.querySelector(`.main-category-row[data-target*="${parentName}"]`);
-                    if (parentRow) {
-                        parentRow.querySelector('.col-assigned strong').textContent = `$${data.updated_parent_category.total_assigned.toFixed(2)}`;
-                        parentRow.querySelector('.col-available strong').textContent = `$${data.updated_parent_category.total_available.toFixed(2)}`;
-                    }
-
-                    // --- 3. Update Grand Total Card ---
-                    const totalAssignedElement = document.querySelector('.total-assigned-value');
-                    if (totalAssignedElement) {
-                        totalAssignedElement.textContent = `$${data.new_grand_total_assigned.toFixed(2)}`;
-                    }
-                }
-
-                $('#editAmountModal').modal('hide');
-                showToast('Budget updated successfully!', 'success');
-
-            } else {
-                showToast(data.error || 'Failed to update amount.', 'danger');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showToast('An unexpected error occurred. Please try again.', 'danger');
-        })
-        .finally(() => {
-            saveBtn.textContent = originalText;
-            saveBtn.disabled = false;
-        });
-    });
+    // Note: saveAmountBtn event listener is defined later to avoid duplicates
     
     // Filter functionality
     document.querySelectorAll('.filter-btn').forEach(button => {
@@ -322,7 +258,7 @@ function showToast(message, type) {
     // Auto remove after 3 seconds
     setTimeout(() => {
         toast.remove();
-    }, 3000);
+    }, 600000);
 }
 </script>
 
@@ -331,6 +267,15 @@ function showToast(message, type) {
 .btn {
     position: relative;
     overflow: hidden;
+}
+
+.btn-nav {
+    /* existing styles */
+} 
+.btn-nav.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 .ripple {
@@ -347,6 +292,21 @@ function showToast(message, type) {
         transform: scale(4);
         opacity: 0;
     }
+}
+
+.limit-info {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+input:invalid {
+    border-color: #dc3545;
+    padding-right: calc(1.5em + 0.75rem);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23dc3545' viewBox='0 0 12 12'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
 }
 
 /* Modal animations */
@@ -444,6 +404,15 @@ function showToast(message, type) {
     padding: 0.5rem 0.8rem;
 }
 
+/* Summary panel dividers */
+.summary-divider {
+    margin: 15px 0;
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    opacity: 0.6;
+}
+
 /* Table row hover effect */
 tbody tr:not(.category-header):hover {
     background-color: rgba(255, 255, 255, 0.03) !important;
@@ -460,16 +429,31 @@ tbody tr:not(.category-header):hover {
 </style>
 
 <script>
-// Initialize tooltips
+// Initialize tooltips and main functionality
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM Content Loaded - initializing...'); // Debug log
+    
     // Initialize tooltips
-    $('[data-toggle="tooltip"]').tooltip();
+    if (typeof $ !== 'undefined') {
+        $('[data-toggle="tooltip"]').tooltip();
+    }
     
     let currentCategoryId = null;
     let isLoading = false;
     
+    // Check if we're on the right page (has the modal)
+    const editModal = document.getElementById('editAmountModal');
+    if (!editModal) {
+        console.log('Edit modal not found - skipping modal functionality');
+        return;
+    }
+    
     // Add loading spinner to save button
     const saveBtn = document.getElementById('saveAmountBtn');
+    if (!saveBtn) {
+        console.error('Save button not found!');
+        return;
+    }
     const saveBtnOriginalText = saveBtn.innerHTML;
     
     // Show loading state
@@ -502,16 +486,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     <i class="bx ${type === 'success' ? 'bx-check-circle' : 'bx-error'} mr-2"></i>
                     ${message}
                 </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                <button type="button" class="close text-white" data-dismiss="toast" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
         `;
         
         document.body.appendChild(toast);
-        const bsToast = new bootstrap.Toast(toast);
-        bsToast.show();
+        $(toast).toast('show');
         
         // Remove toast after it's hidden
-        toast.addEventListener('hidden.bs.toast', () => {
+        $(toast).on('hidden.bs.toast', () => {
             document.body.removeChild(toast);
         });
     };
@@ -649,159 +634,136 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Progress bars toggle
-    let progressBarsVisible = true;
-    document.getElementById('toggleProgressBars').addEventListener('click', function() {
-        progressBarsVisible = !progressBarsVisible;
-        const progressBars = document.querySelectorAll('.progress-bar-container');
-        progressBars.forEach(bar => {
-            bar.style.display = progressBarsVisible ? 'block' : 'none';
-        });
-        
-        this.classList.toggle('btn-outline-secondary');
-        this.classList.toggle('btn-secondary');
-    });
+    // Progress bars toggle removed - not needed
 
-    // Editable amount functionality
-    document.querySelectorAll('.editable-amount').forEach(function(element) {
-        element.addEventListener('click', function() {
-            currentCategoryId = this.dataset.categoryId;
-            const currentAmount = parseFloat(this.dataset.currentAmount);
-            const categoryName = this.closest('tr').querySelector('td span').textContent;
-            
-            document.getElementById('categoryName').value = categoryName;
-            document.getElementById('assignedAmount').value = currentAmount;
-            
-            $('#editAmountModal').modal('show');
-        });
-        
-        // Add cursor pointer to show it's clickable
-        element.style.cursor = 'pointer';
-        element.classList.add('text-primary');
-    });
+    // Old editable amount functionality removed - using assigned-value click handlers instead
 
-    // Save amount functionality with loading state and better feedback
-    document.getElementById('saveAmountBtn').addEventListener('click', function() {
-        if (isLoading) return;
-        
+    // Form submission handling for flash messages
+    const editForm = document.getElementById('editAmountForm');
+    editForm.addEventListener('submit', function(e) {
         const newAmount = parseFloat(document.getElementById('assignedAmount').value);
         const amountInput = document.getElementById('assignedAmount');
         
         // Input validation
         if (isNaN(newAmount) || newAmount < 0) {
+            e.preventDefault();
             amountInput.classList.add('is-invalid');
             showToast('Please enter a valid positive amount', 'danger');
             return;
         }
+        
+        // Set the category ID in the hidden input
+        document.getElementById('categoryIdInput').value = currentCategoryId;
         
         // Remove any previous error states
         amountInput.classList.remove('is-invalid');
         
         // Show loading state
         isLoading = true;
-        showLoading(this, true);
+        showLoading(document.getElementById('saveAmountBtn'), true);
         
-        // Send update to backend
-        fetch('/api/update-category-amount', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: JSON.stringify({
-                category_id: currentCategoryId,
-                amount: newAmount
-            })
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                // Update the displayed amount with animation
-                const amountElement = document.querySelector(`[data-category-id="${currentCategoryId}"]`);
-                const oldAmount = parseFloat(amountElement.dataset.currentAmount || 0);
-                
-                // Animate the number change
-                if (amountElement) {
-                    amountElement.style.transition = 'all 0.3s ease';
-                    amountElement.style.color = newAmount > oldAmount ? '#4caf50' : '#f44336';
-                    amountElement.style.transform = 'scale(1.1)';
-                    
-                    setTimeout(() => {
-                        amountElement.textContent = `$${newAmount.toFixed(2)}`;
-                        amountElement.dataset.currentAmount = newAmount;
-                        
-                        setTimeout(() => {
-                            amountElement.style.color = '';
-                            amountElement.style.transform = '';
-                        }, 300);
-                    }, 150);
-                }
-                
-                // Close modal
-                const modal = bootstrap.Modal.getInstance(document.getElementById('editAmountModal'));
-                modal.hide();
-                
-                // Show success message
-                showToast('Budget updated successfully!', 'success');
-                
-                // Update the total assigned amount with animation
-                const totalAssignedElement = document.querySelector('.total-assigned');
-                if (totalAssignedElement) {
-                    const currentTotal = parseFloat(totalAssignedElement.textContent.replace(/[^0-9.-]+/g,""));
-                    const difference = newAmount - oldAmount;
-                    const newTotal = currentTotal + difference;
-                    
-                    totalAssignedElement.style.transition = 'all 0.3s ease';
-                    totalAssignedElement.style.color = difference > 0 ? '#4caf50' : '#f44336';
-                    totalAssignedElement.style.transform = 'scale(1.05)';
-                    
-                    setTimeout(() => {
-                        totalAssignedElement.textContent = `$${newTotal.toFixed(2)}`;
-                        
-                        setTimeout(() => {
-                            totalAssignedElement.style.color = '';
-                            totalAssignedElement.style.transform = '';
-                        }, 300);
-                    }, 150);
-                }
+        // Form will submit normally and redirect back to home page with flash message
+    });
+    
+    // Add click event listeners to all assigned value cells
+    const assignedCells = document.querySelectorAll('.assigned-value');
+    console.log('Found assigned value cells:', assignedCells.length); // Debug log
+    
+    assignedCells.forEach(function(cell) {
+        cell.addEventListener('click', function() {
+            const categoryId = this.getAttribute('data-category-id');
+            const currentAmount = parseFloat(this.getAttribute('data-current-amount') || 0);
+            const categoryName = this.getAttribute('data-category-name') || 'Unknown Category';
+            
+            console.log('Clicked cell:', this); // Debug log
+            console.log('Category ID:', categoryId); // Debug log
+            console.log('Category Name:', categoryName); // Debug log
+            console.log('Current Amount:', currentAmount); // Debug log
+            
+            // Set the global variable
+            currentCategoryId = categoryId;
+            
+            // Update modal content
+            const categoryNameElement = document.getElementById('categoryName');
+            const amountInput = document.getElementById('assignedAmount');
+            
+            if (categoryNameElement) {
+                categoryNameElement.textContent = categoryName;
+                console.log('Set category name to:', categoryName); // Debug log
             } else {
-                throw new Error(data.error || 'Failed to update amount');
+                console.error('Category name element not found');
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showToast(error.message || 'Error updating amount. Please try again.', 'danger');
-        })
-        .finally(() => {
-            isLoading = false;
-            showLoading(document.getElementById('saveAmountBtn'), false);
+            
+            if (amountInput) {
+                amountInput.value = currentAmount.toFixed(2);
+                console.log('Set amount to:', currentAmount.toFixed(2)); // Debug log
+            }
+            
+            // Set the category ID in the hidden input
+            if (categoryIdInput) {
+                categoryIdInput.value = categoryId;
+            }
+            
+            // Show the modal
+            $('#editAmountModal').modal('show');
         });
     });
     
-    // Handle modal events
-    const editModal = document.getElementById('editAmountModal');
+    // Handle modal events (backup)
     if (editModal) {
-        editModal.addEventListener('show.bs.modal', function (event) {
+        $(editModal).on('show.bs.modal', function (event) {
+            console.log('Modal show event triggered'); // Debug log
             const button = event.relatedTarget;
+            if (!button) {
+                console.log('No relatedTarget, using direct click handler instead');
+                return;
+            }
             const categoryId = button.getAttribute('data-category-id');
             const currentAmount = parseFloat(button.getAttribute('data-current-amount') || 0);
-            const categoryName = button.closest('tr').querySelector('td:first-child').textContent.trim();
+            // Get the category name from the data attribute
+            const categoryName = button.getAttribute('data-category-name') || 'Unknown Category';
             
+            console.log('Button element:', button); // Debug log
+            console.log('Category ID:', categoryId); // Debug log
+            console.log('Category Name from data attribute:', categoryName); // Debug log
+            console.log('Current Amount:', currentAmount); // Debug log
+            
+            const mainCategoryRow = button.closest('tr').closest('tbody').querySelector('.main-category-row');
+            const mainCategoryName = mainCategoryRow ? mainCategoryRow.querySelector('td:first-child strong').textContent.trim().toLowerCase() : '';
+    
             currentCategoryId = categoryId;
-            const modalTitle = editModal.querySelector('.modal-title');
+            const categoryNameElement = editModal.querySelector('#categoryName');
             const amountInput = editModal.querySelector('#assignedAmount');
-            
-            modalTitle.textContent = `Edit ${categoryName} Budget`;
+            const categoryIdInput = editModal.querySelector('#categoryIdInput');
+            const limitInfo = editModal.querySelector('.limit-info');
+    
+            // Set the category name in the grey box
+            if (categoryNameElement) {
+                categoryNameElement.textContent = categoryName;
+                console.log('Set category name to:', categoryName); // Debug log
+            } else {
+                console.error('Category name element not found');
+            }
             amountInput.value = currentAmount.toFixed(2);
-            amountInput.select();
-            
-            // Reset validation state
-            amountInput.classList.remove('is-invalid');
+    
+    // Add or update limit info
+            if (!limitInfo) {
+                const limitInfoEl = document.createElement('div');
+                limitInfoEl.className = 'limit-info small text-muted mt-2';
+                amountInput.parentNode.appendChild(limitInfoEl);
+            }
+    
+    // Get the budget limits from the main category row
+            const mainCategoryAssigned = mainCategoryRow ? 
+                parseFloat(mainCategoryRow.querySelector('.col-assigned strong').textContent.replace(/[^0-9.-]+/g, "")) : 0;
+            const mainCategoryLimit = mainCategoryRow ? 
+                parseFloat(mainCategoryRow.getAttribute('data-max-limit') || '0') : 0;
+    
+            const remaining = mainCategoryLimit - (mainCategoryAssigned - currentAmount);
+            const limitInfoText = `Maximum allowed for ${mainCategoryName}: $${remaining.toFixed(2)}`;
+    
+            editModal.querySelector('.limit-info').textContent = limitInfoText;
+            amountInput.max = remaining;
         });
         
         editModal.addEventListener('shown.bs.modal', function () {
@@ -817,13 +779,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Month navigation
-    document.getElementById('prevMonth').addEventListener('click', function() {
-        console.log('Previous month');
-    });
+    const prevMonthBtn = document.getElementById('prevMonth');
+    const nextMonthBtn = document.getElementById('nextMonth');
+    
+    if (prevMonthBtn) {
+        prevMonthBtn.addEventListener('click', function() {
+            console.log('Previous month');
+        });
+    }
 
-    document.getElementById('nextMonth').addEventListener('click', function() {
-        console.log('Next month');
-    });
+    if (nextMonthBtn) {
+        nextMonthBtn.addEventListener('click', function() {
+            console.log('Next month');
+        });
+    }
 });
 </script>
 

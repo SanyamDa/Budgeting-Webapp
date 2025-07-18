@@ -72,13 +72,13 @@ def home(year=None, month=None):
                 leftover = total_assigned_prev - total_spent_prev
                 
                 new_rollover = MonthlyRollover(
-                    plan_id=plan.id, month=prev_month_int, year=prev_month_year, leftover_amount=leftover
+                    plan_id=plan.id, month=prev_month_int, year=prev_month_year, amount=leftover
                 )
                 db.session.add(new_rollover)
                 db.session.commit()
                 rollover_amount = leftover
         else:
-            rollover_amount = rollover_from_last_month.leftover_amount
+            rollover_amount = rollover_from_last_month.amount
 
     # --- Budget Processing for Display Month ---
     categories = BudgetCategory.query.filter_by(plan_id=plan.id).all()
@@ -86,8 +86,8 @@ def home(year=None, month=None):
     for cat in categories:
         mb = MonthlyBudget.query.filter_by(plan_id=plan.id, category_id=cat.id, month=month, year=year).first()
         if not mb:
-            mb = MonthlyBudget(plan_id=plan.id, category_id=cat.id, month=month, year=year,
-                               assigned_amount=cat.assigned_amount, spent_amount=0)
+            # For new months, start with assigned_amount = 0 (fresh start)
+            mb = MonthlyBudget(plan_id=plan.id, category_id=cat.id, month=month, year=year, assigned_amount=0, spent_amount=0)
             db.session.add(mb)
         monthly_budgets_map[cat.id] = mb
     db.session.commit()
@@ -134,6 +134,16 @@ def home(year=None, month=None):
     prev_month_date = display_date - relativedelta(months=1)
     next_month_date = display_date + relativedelta(months=1)
 
+    # Check if user can navigate to previous month (based on when they joined)
+    user_start_date = current_user.date_created
+    user_start_month = user_start_date.month
+    user_start_year = user_start_date.year
+
+    # Disable previous month navigation if trying to go before user's start month
+    can_go_prev = not (prev_month_date.year < user_start_year or 
+                   (prev_month_date.year == user_start_year and prev_month_date.month < user_start_month))
+    can_go_next = True
+
     return render_template("home.html", 
                          plan=plan,
                          categories=organized_categories,
@@ -146,6 +156,8 @@ def home(year=None, month=None):
                          next_month=next_month_date.month,
                          next_year=next_month_date.year,
                          is_first_month=is_first_month,
+                         can_go_prev=can_go_prev,
+                         can_go_next=can_go_next,
                          # Summary data
                          total_assigned=total_assigned,
                          total_spent=total_spent,
@@ -182,6 +194,7 @@ def update_assigned():
     category.assigned_amount = amount  # keep legacy field in sync
 
     db.session.commit()
+
     return jsonify({'success': True, 'assigned_amount': amount})
 
 @views.route('/api/update-category-amount', methods=['POST'])
@@ -190,64 +203,208 @@ def update_category_amount():
     """API endpoint to update category assigned amount with validation"""
     try:
         data = request.get_json()
+        print(f"Raw request data: {data}")  # Debug: see what we actually receive
+        print(f"Request headers: {dict(request.headers)}")  # Debug: check content type
         category_id = data.get('category_id')
         new_amount = float(data.get('amount', 0))
+        print(f"Extracted category_id: {category_id}, type: {type(category_id)}")  # Debug
+        
+        # Convert category_id to integer if it's a string
+        if category_id is not None:
+            try:
+                category_id = int(category_id)
+                print(f"Converted category_id to int: {category_id}")  # Debug
+            except (ValueError, TypeError):
+                return jsonify({'success': False, 'error': 'Invalid category ID'}), 400
+        else:
+            return jsonify({'success': False, 'error': 'Category ID is required'}), 400
 
         if new_amount < 0:
             return jsonify({'success': False, 'error': 'Assigned amount cannot be negative.'}), 400
 
         plan = current_user.active_plan
         if not plan:
-            return jsonify({'success': False, 'error': 'Active plan not found.'}), 404
+            return jsonify({'success': False, 'error': 'No active plan found'}), 400
 
-        category_to_update = BudgetCategory.query.filter_by(id=category_id, plan_id=plan.id).first()
-        if not category_to_update:
-            return jsonify({'success': False, 'error': 'Category not found'}), 404
-
-        # --- Income Validation ---
-        total_assigned_query = db.session.query(func.sum(BudgetCategory.assigned_amount)).filter(BudgetCategory.plan_id == plan.id)
-        current_total_assigned = total_assigned_query.scalar() or 0.0
-        new_total_assigned = current_total_assigned - category_to_update.assigned_amount + new_amount
-
-        if new_total_assigned > plan.monthly_income:
-            overage = new_total_assigned - plan.monthly_income
-            error_message = f'This change would exceed your monthly income by ${overage:.2f}. Please adjust.'
-            return jsonify({'success': False, 'error': error_message}), 400
-
-        # --- Update Database ---
-        category_to_update.assigned_amount = new_amount
-        db.session.commit()
-
-        # --- Recalculate Totals for Response ---
-        main_cat_name = category_to_update.main_category
-        main_cat_subcategories = BudgetCategory.query.filter_by(plan_id=plan.id, main_category=main_cat_name).all()
-
-        parent_total_assigned = sum(c.assigned_amount for c in main_cat_subcategories)
-        parent_total_spent = sum(c.spent_amount for c in main_cat_subcategories)
-        parent_total_available = parent_total_assigned - parent_total_spent
+        # Debug: Print what we're looking for
+        print(f"Looking for category_id: {category_id}, plan_id: {plan.id}")
         
-        # Grand total is the value we already calculated
-        grand_total_assigned = new_total_assigned
+        # Get the category to update
+        category_to_update = BudgetCategory.query.filter_by(
+            id=category_id,
+            plan_id=plan.id
+        ).first()
+        
+        # Debug: Print all categories for this plan
+        all_categories = BudgetCategory.query.filter_by(plan_id=plan.id).all()
+        print(f"All categories for plan {plan.id}:")
+        for cat in all_categories:
+            print(f"  ID: {cat.id}, Name: {cat.name}, Main: {cat.main_category}")
 
+        if not category_to_update:
+            return jsonify({'success': False, 'error': f'Category not found. Looking for ID {category_id} in plan {plan.id}'}), 404
+
+        # Get the main category name (needs, wants, or investments)
+        print(f"About to access category_to_update attributes...")  # Debug
+        print(f"Category object: {category_to_update}")  # Debug
+        print(f"Category found: {category_to_update.name}, main_category: {category_to_update.main_category}")  # Debug
+        main_cat_name = category_to_update.main_category.lower()
+        print(f"Main category name: {main_cat_name}")  # Debug
+        
+        # Get the budget ratios from plan settings
+        print(f"Plan budget_pref: {plan.budget_pref}")  # Debug
+        print(f"Plan monthly_income: {plan.monthly_income}")  # Debug
+        budget_ratios = plan.budget_pref.get('ratios', {}) if plan.budget_pref else {}
+        print(f"Budget ratios: {budget_ratios}")  # Debug
+        
+        # Handle naming inconsistency: "investments" in categories vs "savings" in budget_pref
+        ratio_key = main_cat_name
+        if main_cat_name == 'investments':
+            ratio_key = 'savings'
+        
+        try:
+            category_ratio = budget_ratios.get(ratio_key, 0) / 100.0
+            print(f"Category ratio for {main_cat_name} (using key '{ratio_key}'): {category_ratio}")  # Debug  # Debug
+        except Exception as e:
+            print(f"Error calculating category ratio: {e}")  # Debug
+            raise        
+        # Calculate the maximum allowed amount based on the ratio
+        max_allowed = plan.monthly_income * category_ratio if plan.monthly_income else 0
+        
+        # Get current total assigned to this main category
+        current_date = datetime.datetime.now()
+        current_month = current_date.month
+        current_year = current_date.year
+        
+        # Get current total assigned to this main category from MonthlyBudget records
+        current_total = 0
+        for c in plan.categories:
+            if c.main_category.lower() == main_cat_name and c.id != category_id:
+                mb = MonthlyBudget.query.filter_by(
+                    plan_id=plan.id, 
+                    category_id=c.id, 
+                    month=current_month, 
+                    year=current_year
+                ).first()
+                if mb:
+                    current_total += mb.assigned_amount
+                else:
+                    current_total += c.assigned_amount  # fallback to base amount
+        
+        # Check if new amount would exceed the category's budget
+        if (current_total + new_amount) > max_allowed:
+            error_msg = (
+                f"Cannot assign ${new_amount:.2f}. You only have "
+                f"${(max_allowed - current_total):.2f} left to assign in "
+                f"{main_cat_name.capitalize()}."
+            )
+            return jsonify({'success': False, 'error': error_msg}), 400
+        # Update the category amount
+        # Get current month and year
+        current_date = datetime.datetime.now()
+        current_month = current_date.month
+        current_year = current_date.year
+        
+        # Find or create MonthlyBudget record for this category and month
+        monthly_budget = MonthlyBudget.query.filter_by(
+            plan_id=plan.id, 
+            category_id=category_id, 
+            month=current_month, 
+            year=current_year
+        ).first()
+        
+        if not monthly_budget:
+            monthly_budget = MonthlyBudget(
+                plan_id=plan.id,
+                category_id=category_id,
+                month=current_month,
+                year=current_year,
+                assigned_amount=new_amount,
+                spent_amount=0
+            )
+            db.session.add(monthly_budget)
+        else:
+            monthly_budget.assigned_amount = new_amount
+        
+        # Also update the base category for consistency
+        print(f"About to update category {category_to_update.id} from {category_to_update.assigned_amount} to {new_amount}")  # Debug
+        old_amount = category_to_update.assigned_amount
+        category_to_update.assigned_amount = new_amount
+        
+        try:
+            db.session.commit()
+            print("Database commit successful")  # Debug
+        except Exception as e:
+            print(f"Database commit failed: {e}")  # Debug
+            raise
+
+        # Calculate updated totals
+        try:
+            parent_total_assigned = 0
+            parent_total_spent = 0
+            
+            for c in plan.categories:
+                if c.main_category.lower() == main_cat_name:
+                    mb = MonthlyBudget.query.filter_by(
+                        plan_id=plan.id, 
+                        category_id=c.id, 
+                        month=current_month, 
+                        year=current_year
+                    ).first()
+                    if mb:
+                        parent_total_assigned += mb.assigned_amount
+                        parent_total_spent += mb.spent_amount
+                    else:
+                        parent_total_assigned += c.assigned_amount
+                        parent_total_spent += c.spent_amount
+            
+            parent_total_available = parent_total_assigned - parent_total_spent
+            
+            # Calculate grand total from all MonthlyBudget records
+            grand_total_assigned = 0
+            for c in plan.categories:
+                mb = MonthlyBudget.query.filter_by(
+                    plan_id=plan.id, 
+                    category_id=c.id, 
+                    month=current_month, 
+                    year=current_year
+                ).first()
+                if mb:
+                    grand_total_assigned += mb.assigned_amount
+                else:
+                    grand_total_assigned += c.assigned_amount
+            
+            print(f"Calculated totals successfully: parent_assigned={parent_total_assigned}, grand_total={grand_total_assigned}")  # Debug
+        except Exception as e:
+            print(f"Error calculating totals: {e}")  # Debug
+            raise
+
+        category_available = new_amount - category_to_update.spent_amount
+
+        # Calculate money remaining (monthly income - total assigned)
+        money_remaining = (plan.monthly_income or 0) - grand_total_assigned
+        
         return jsonify({
             'success': True,
             'updated_subcategory': {
                 'id': category_to_update.id,
-                'new_amount': category_to_update.assigned_amount,
-                'available_amount': category_to_update.available_amount
+                'new_amount': new_amount,
+                'available_amount': category_available
             },
             'updated_parent_category': {
                 'name': main_cat_name,
                 'total_assigned': parent_total_assigned,
                 'total_available': parent_total_available
             },
-            'new_grand_total_assigned': grand_total_assigned
+            'new_grand_total_assigned': grand_total_assigned,
+            'money_remaining': money_remaining
         })
 
     except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
+        import traceback
+        print(f"FULL ERROR TRACEBACK:")
+        print(traceback.format_exc())
+        return jsonify({'success': False, 'error': f'Internal server error: {str(e)}'}), 500
 
 @views.route('/api/add-transaction', methods=['POST'])
 @login_required
@@ -284,12 +441,14 @@ def add_transaction():
         ).scalar() or 0
         category.spent_amount = abs(spent)
         db.session.commit()
-        
+    
+
         return jsonify({
             'success': True,
             'transaction_id': transaction.id,
             'category_spent': category.spent_amount,
-            'category_available': category.available_amount
+            'category_available': category.available_amount,
+            'flash': flash_msg
         })
         
     except Exception as e:
@@ -375,19 +534,39 @@ def plan_settings():
 
         elif 'update_ratios' in request.form:
             try:
-                needs = int(request.form.get('needs_ratio'))
-                wants = int(request.form.get('wants_ratio'))
-                savings = int(request.form.get('savings_ratio'))
-
-                if needs + wants + savings == 100:
+                # Get raw values and handle potential issues
+                needs_raw = request.form.get('needs_ratio', '').strip()
+                wants_raw = request.form.get('wants_ratio', '').strip()
+                savings_raw = request.form.get('savings_ratio', '').strip()
+                
+                # Debug logging
+                print(f"Debug - Raw form values: needs='{needs_raw}', wants='{wants_raw}', savings='{savings_raw}'")
+                
+                # Validate and convert to integers
+                if not needs_raw or not wants_raw or not savings_raw:
+                    flash("All ratio fields must have values.", 'error')
+                    return redirect(url_for('views.plan_settings'))
+                
+                # Handle decimal values by converting to float first, then int
+                needs = int(float(needs_raw))
+                wants = int(float(wants_raw))
+                savings = int(float(savings_raw))
+                
+                # Validate ranges
+                if needs < 0 or wants < 0 or savings < 0:
+                    flash("Ratio values cannot be negative.", 'error')
+                elif needs > 100 or wants > 100 or savings > 100:
+                    flash("Individual ratio values cannot exceed 100%.", 'error')
+                elif needs + wants + savings == 100:
                     plan.budget_pref['ratios'] = {'needs': needs, 'wants': wants, 'savings': savings}
                     flag_modified(plan, 'budget_pref')
                     db.session.commit()
                     flash("Category ratios updated successfully!", 'success')
                 else:
-                    flash("Ratios must add up to 100.", 'error')
-            except (ValueError, TypeError):
-                flash("Invalid ratio value.", 'error')
+                    flash(f"Ratios must add up to 100%. Current total: {needs + wants + savings}%", 'error')
+            except (ValueError, TypeError) as e:
+                print(f"Debug - Exception in ratio conversion: {e}")
+                flash("Invalid ratio value. Please enter whole numbers only.", 'error')
 
 
 
@@ -484,3 +663,111 @@ def set_password():
         flash('Password updated successfully!', category='success')
 
     return redirect(url_for('views.account_settings'))
+
+@views.route('/update-budget-form', methods=['POST'])
+@login_required
+def update_budget_form():
+    """Form-based budget update that uses flash messages"""
+    category_id = request.form.get('category_id')
+    new_amount = request.form.get('amount')
+    
+    try:
+        category_id = int(category_id)
+        new_amount = float(new_amount)
+    except (ValueError, TypeError):
+        flash('Invalid input values.', 'error')
+        return redirect(url_for('views.home'))
+    
+    if new_amount < 0:
+        flash('Assigned amount cannot be negative.', 'error')
+        return redirect(url_for('views.home'))
+
+    plan = current_user.active_plan
+    if not plan:
+        flash('No active plan found.', 'error')
+        return redirect(url_for('views.home'))
+
+    # Get the category to update
+    category_to_update = BudgetCategory.query.filter_by(
+        id=category_id, plan_id=plan.id
+    ).first()
+    
+    if not category_to_update:
+        flash('Category not found.', 'error')
+        return redirect(url_for('views.home'))
+
+    # Get the main category name
+    main_cat_name = category_to_update.main_category.lower()
+    
+    # Get budget ratios and calculate limits
+    budget_ratios = plan.budget_pref.get('ratios', {}) if plan.budget_pref else {}
+    ratio_key = 'savings' if main_cat_name == 'investments' else main_cat_name
+    category_ratio = budget_ratios.get(ratio_key, 0) / 100.0
+    max_allowed = plan.monthly_income * category_ratio if plan.monthly_income else 0
+    
+    # Calculate current total for this main category (excluding the category being updated)
+    current_date = datetime.datetime.now()
+    current_month = current_date.month
+    current_year = current_date.year
+    
+    current_total_others = 0
+    current_category_amount = 0
+    
+    for c in plan.categories:
+        if c.main_category.lower() == main_cat_name:
+            mb = MonthlyBudget.query.filter_by(
+                plan_id=plan.id, 
+                category_id=c.id, 
+                month=current_month, 
+                year=current_year
+            ).first()
+            if mb:
+                if c.id == category_id:
+                    current_category_amount = mb.assigned_amount
+                else:
+                    current_total_others += mb.assigned_amount
+    
+    # Calculate how much budget is available
+    # When updating, we get "credit" for the current assignment being replaced
+    remaining_budget = max_allowed - current_total_others
+    
+    # Check if new amount would exceed the category's budget
+    if new_amount > remaining_budget:
+        # Calculate the net change (how much extra money is needed)
+        net_change = new_amount - current_category_amount
+        actual_available = remaining_budget - current_category_amount
+        
+        flash(
+            f"Cannot assign ${new_amount:.2f}. Total assigned to "
+            f"{main_cat_name.capitalize()} would be "
+            f"${(current_total_others + new_amount):.2f}, exceeding the "
+            f"budget limit of ${max_allowed:.2f}.",
+            'error'
+        )
+        return redirect(url_for('views.home'))
+    
+    # Update the budget
+    mb = MonthlyBudget.query.filter_by(
+        plan_id=plan.id, 
+        category_id=category_id, 
+        month=current_month, 
+        year=current_year
+    ).first()
+    
+    if mb:
+        mb.assigned_amount = new_amount
+    else:
+        mb = MonthlyBudget(
+            plan_id=plan.id, 
+            category_id=category_id, 
+            month=current_month, 
+            year=current_year, 
+            assigned_amount=new_amount, 
+            spent_amount=0
+        )
+        db.session.add(mb)
+    
+    db.session.commit()
+    
+    flash(f'Successfully assigned ${new_amount:.2f} to {category_to_update.name}.', 'success')
+    return redirect(url_for('views.home'))

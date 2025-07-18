@@ -2,6 +2,76 @@
 {% block title %}Plan Settings{% endblock %}
 
 {% block content %}
+<style>
+/* Fix text readability in plan settings - Override dark theme with higher specificity */
+
+/* Light theme specific styles */
+[data-theme='light'] .card-body,
+[data-theme='light'] .card-body *,
+.card-body,
+.card-body * {
+    color: #333 !important;
+}
+
+[data-theme='light'] .card-body label,
+.card-body label {
+    color: #333 !important;
+    font-weight: 500;
+}
+
+[data-theme='light'] .card-body .form-control,
+.card-body .form-control {
+    color: #333 !important;
+    background-color: #fff !important;
+}
+
+[data-theme='light'] .card-header .btn-link,
+.card-header .btn-link {
+    color: #333 !important;
+    text-decoration: none;
+}
+
+[data-theme='light'] .card-header .btn-link:hover,
+.card-header .btn-link:hover {
+    color: #007bff !important;
+}
+
+[data-theme='light'] .list-group-item,
+.list-group-item {
+    color: #333 !important;
+    background-color: #fff !important;
+}
+
+[data-theme='light'] .text-muted,
+.text-muted {
+    color: #6c757d !important;
+}
+
+[data-theme='light'] .subcategory-item,
+.subcategory-item {
+    background-color: #f8f9fa !important;
+    border: 1px solid #dee2e6;
+    color: #333 !important;
+}
+
+/* Force plan settings page text to be dark in light mode */
+[data-theme='light'] #planSettingsAccordion .card *:not(.btn),
+#planSettingsAccordion .card *:not(.btn) {
+    color: #333 !important;
+}
+
+[data-theme='light'] #planSettingsAccordion .form-control,
+#planSettingsAccordion .form-control {
+    color: #333 !important;
+    background-color: #fff !important;
+}
+
+[data-theme='light'] #planSettingsAccordion .form-label,
+#planSettingsAccordion .form-label {
+    color: #333 !important;
+}
+</style>
+
 <h1 class="h3 my-4 text-gray-800">Plan Settings</h1>
 
 <div class="accordion" id="planSettingsAccordion">
@@ -45,15 +115,21 @@
           <div class="form-row">
             <div class="form-group col-md-4">
               <label for="needs_ratio">Needs (%)</label>
-              <input type="number" id="needs_ratio" name="needs_ratio" class="form-control" value="{{ plan.budget_pref.get('ratios', {}).get('needs', 50) }}">
+              <input type="number" id="needs_ratio" name="needs_ratio" class="form-control" 
+                     min="0" max="100" step="1" required
+                     value="{{ plan.budget_pref.get('ratios', {}).get('needs', 50) }}">
             </div>
             <div class="form-group col-md-4">
               <label for="wants_ratio">Wants (%)</label>
-              <input type="number" id="wants_ratio" name="wants_ratio" class="form-control" value="{{ plan.budget_pref.get('ratios', {}).get('wants', 30) }}">
+              <input type="number" id="wants_ratio" name="wants_ratio" class="form-control" 
+                     min="0" max="100" step="1" required
+                     value="{{ plan.budget_pref.get('ratios', {}).get('wants', 30) }}">
             </div>
             <div class="form-group col-md-4">
               <label for="savings_ratio">Investments (%)</label>
-              <input type="number" id="savings_ratio" name="savings_ratio" class="form-control" value="{{ plan.budget_pref.get('ratios', {}).get('savings', 20) }}">
+              <input type="number" id="savings_ratio" name="savings_ratio" class="form-control" 
+                     min="0" max="100" step="1" required
+                     value="{{ plan.budget_pref.get('ratios', {}).get('savings', 20) }}">
             </div>
           </div>
           <button type="submit" name="update_ratios" value="true" class="btn btn-primary">Save Ratios</button>
