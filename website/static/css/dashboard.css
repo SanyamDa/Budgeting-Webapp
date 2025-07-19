@@ -391,3 +391,7 @@ body.verify-page .card .form-control:-webkit-autofill:focus {
   display: none !important;
 }
 
+tr.collapse:not(.show) {
+  display: none !important;
+}
+

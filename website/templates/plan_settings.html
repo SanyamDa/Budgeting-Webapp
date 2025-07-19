@@ -70,6 +70,53 @@
 #planSettingsAccordion .form-label {
     color: #333 !important;
 }
+
+/* Fix main category headers (Needs, Wants, Investments) - Maximum specificity */
+[data-theme='light'] #planSettingsAccordion .card-header h2,
+[data-theme='light'] #planSettingsAccordion .card-header .btn-link,
+[data-theme='light'] #planSettingsAccordion .card-header .btn-link span,
+[data-theme='light'] #planSettingsAccordion .card-header h2 .btn-link,
+[data-theme='light'] #planSettingsAccordion .card-header h2 .btn-link span,
+#planSettingsAccordion .card-header h2,
+#planSettingsAccordion .card-header .btn-link,
+#planSettingsAccordion .card-header .btn-link span,
+#planSettingsAccordion .card-header h2 .btn-link,
+#planSettingsAccordion .card-header h2 .btn-link span {
+    color: #333 !important;
+    font-weight: 600 !important;
+}
+
+/* Force all text in card headers to be black */
+[data-theme='light'] #planSettingsAccordion .card-header *,
+#planSettingsAccordion .card-header * {
+    color: #333 !important;
+}
+
+/* Override any button text color */
+[data-theme='light'] #planSettingsAccordion .card-header button,
+[data-theme='light'] #planSettingsAccordion .card-header button *,
+#planSettingsAccordion .card-header button,
+#planSettingsAccordion .card-header button * {
+    color: #333 !important;
+}
+
+/* Fix Add button to span full width */
+.input-group .btn {
+    width: auto !important;
+}
+
+.input-group {
+    width: 100% !important;
+}
+
+.input-group .form-control {
+    flex: 1 !important;
+}
+
+.input-group .btn {
+    flex-shrink: 0 !important;
+    min-width: 80px !important;
+}
 </style>
 
 <h1 class="h3 my-4 text-gray-800">Plan Settings</h1>

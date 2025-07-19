@@ -426,6 +426,11 @@ tbody tr:not(.category-header):hover {
 .rotate-90 {
     transform: rotate(-90deg);
 }
+
+/* Hide collapsed subcategory rows completely */
+tr.collapse:not(.show) {
+    display: none !important;
+}
 </style>
 
 <script>
