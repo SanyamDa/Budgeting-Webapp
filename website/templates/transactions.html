@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+
+{% block title %}All Transactions{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h3 class="page-title mb-4">All Transactions</h3>
+
+    <!-- Balances summary -->
+    <div class="card glass p-4 d-flex flex-row align-items-center justify-content-center balances-display mb-5">
+        <!-- Monthly Allowance -->
+        <div class="text-center mx-4 mb-3 mb-lg-0">
+            <h2 class="text-success mb-0">${{ "%.2f"|format(monthly_allowance) }}</h2>
+            <small class="text-muted">Monthly Allowance</small>
+        </div>
+
+        <!-- Minus sign -->
+        <div class="h4 mb-0 text-muted">-</div>
+
+        <!-- Activity -->
+        <div class="text-center mx-4 mb-3 mb-lg-0">
+            <h2 class="text-danger mb-0">${{ "%.2f"|format(activity_total) }}</h2>
+            <small class="text-muted">Activity</small>
+        </div>
+
+        <!-- Equals sign -->
+        <div class="h4 mb-0 text-muted">=</div>
+
+        <!-- Available -->
+        <div class="text-center mx-4 mb-3 mb-lg-0">
+            <h2 class="text-primary mb-0">${{ "%.2f"|format(available) }}</h2>
+            <small class="text-muted">Available</small>
+        </div>
+    </div>
+
+    <!-- Add Transaction Button -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0">Transaction History</h4>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary mr-2" id="managePayeesBtn" data-toggle="modal" data-target="#managePayeesModal">
+                <i class="bx bx-user"></i> Manage Payees
+            </button>
+            <button class="btn btn-primary" id="addTransactionBtn" data-toggle="modal" data-target="#addTransactionModal">
+                <i class="bx bx-plus"></i> Add Transaction
+            </button>
+        </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="transactions-table-container">
+        <div class="table-responsive">
+        <table id="transactionsTable" class="table table-striped table-bordered">
+            <thead class="thead-light">
+                <tr>
+                    <th>Date</th>
+                    <th>Category</th>
+                    <th>Sub-Category</th>
+                    <th class="text-right">Amount</th>
+                    <th class="text-right">Available</th>
+                    <th>Payee</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tx in transactions %}
+                <tr data-transaction-id="{{ tx.id }}">
+                    <td>{{ tx.transaction_date.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ tx.category.main_category.capitalize() }}</td>
+                    <td>{{ tx.category.name }}</td>
+                    <td class="text-right">${{ "%.2f"|format(tx.amount|abs) }}</td>
+                    <td class="text-right">${{ "%.2f"|format(tx.category.available_amount) }}</td>
+                    <td class="payee-cell" role="button" tabindex="0" data-current-payee="{{ tx.payee.id if tx.payee else '' }}">
+                        {{ tx.payee.name if tx.payee else 'Select…' }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <!-- Payee Dropdown Template (hidden) -->
+    <div id="payeeDropdownTemplate" class="dropdown-menu" style="display:none; position:absolute;">
+        <h6 class="dropdown-header">Select Payee</h6>
+        <div class="payee-list"></div>
+        <div class="dropdown-divider"></div>
+        <a class="dropdown-item text-primary manage-payees" href="#">Manage Payees…</a>
+    </div>
+
+    <!-- Manage Payees Modal -->
+    <div class="modal fade" id="managePayeesModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Manage Payees</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <ul id="payeesList" class="list-group mb-3"></ul>
+                    <div class="d-flex gap-2">
+                        <input type="text" id="newPayeeName" class="form-control" placeholder="New payee name…">
+                        <button class="btn btn-primary" id="addPayeeBtn" style="min-width: 60px;">Add</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Transaction Modal -->
+    <div class="modal fade" id="addTransactionModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Transaction</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="addTransactionForm">
+                        <div class="form-group">
+                            <label for="transactionDescription">Description</label>
+                            <input type="text" class="form-control" id="transactionDescription" placeholder="Enter transaction description" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="transactionAmount">Amount</label>
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">$</span>
+                                </div>
+                                <input type="number" class="form-control" id="transactionAmount" step="0.01" min="0.01" placeholder="0.00" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="transactionCategory">Category</label>
+                            <select class="form-control" id="transactionCategory" required>
+                                <option value="">Select a category...</option>
+                                <!-- Categories will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="transactionPayee">Payee (Optional)</label>
+                            <select class="form-control" id="transactionPayee">
+                                <option value="">Select a payee...</option>
+                                <!-- Payees will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="transactionDate">Date</label>
+                            <input type="date" class="form-control" id="transactionDate" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveTransactionBtn">Add Transaction</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+/* Glass card effect for transactions table */
+.transactions-table-container {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.transactions-table-container .table {
+    margin-bottom: 0;
+    background-color: transparent;
+}
+
+.transactions-table-container .table th {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 1rem;
+}
+
+.transactions-table-container .table td {
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 1rem;
+    vertical-align: middle;
+}
+
+.transactions-table-container .table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.transactions-table-container .table th:first-child,
+.transactions-table-container .table td:first-child {
+    border-left: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.transactions-table-container .table th:last-child,
+.transactions-table-container .table td:last-child {
+    border-right: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.transactions-table-container .table thead th:first-child {
+    border-top-left-radius: 12px;
+}
+
+.transactions-table-container .table thead th:last-child {
+    border-top-right-radius: 12px;
+}
+
+.transactions-table-container .table tbody tr:last-child td:first-child {
+    border-bottom-left-radius: 12px;
+}
+
+.transactions-table-container .table tbody tr:last-child td:last-child {
+    border-bottom-right-radius: 12px;
+}
+
+.transactions-table-container .table tbody tr:last-child td {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.transactions-table-container .table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* Payee cell styling */
+.payee-cell {
+    cursor: pointer;
+    transition: all 0.25s ease;
+    border-radius: 4px;
+    padding: 0.5rem 1rem !important;
+}
+
+.payee-cell:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    transform: translateY(-1px);
+}
+
+/* Add Transaction button styling */
+#addTransactionBtn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+#addTransactionBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+}
+
+#addTransactionBtn i {
+    margin-right: 0.5rem;
+}
+
+/* Modal styling */
+.modal-content {
+    background: #ffffff !important;
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+    background-color: #f8f9fa !important;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 12px 12px 0 0;
+}
+
+.modal-footer {
+    background-color: #f8f9fa !important;
+    border-top: 1px solid #dee2e6;
+    border-radius: 0 0 12px 12px;
+}
+
+/* High specificity modal title styles to override Bootstrap */
+.modal .modal-dialog .modal-content .modal-header .modal-title {
+    color: #000000 !important;
+    font-weight: 600 !important;
+    font-size: 1.25rem !important;
+}
+
+/* Additional selectors for maximum specificity */
+.modal-header h5.modal-title {
+    color: #000000 !important;
+    font-weight: 600 !important;
+}
+
+#addTransactionModal .modal-title,
+#managePayeesModal .modal-title {
+    color: #000000 !important;
+    font-weight: 600 !important;
+}
+
+/* Ensure all modal headers are readable */
+.modal-header h5 {
+    color: #000000 !important;
+}
+
+.modal-body {
+    background-color: #ffffff !important;
+    color: #212529 !important;
+}
+
+.form-control {
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    color: #333;
+}
+
+.form-control:focus {
+    background-color: #fff;
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+}
+
+/* Right align amount columns */
+.text-right {
+    text-align: right !important;
+}
+</style>
+
+<script>
+    // Jinja2 template variables - IDE may show errors but this is valid
+    window.initialPayees = {{ payees|tojson|safe }};
+    window.categories = [];
+</script>
+<script src="{{ url_for('static', filename='js/transactions.js') }}"></script>
+{% endblock %}

@@ -79,17 +79,28 @@ class MonthlyRollover(db.Model):
     plan = db.relationship('Plan', backref=db.backref('rollovers', lazy=True, cascade="all, delete-orphan"))
 
 # Transaction model
+class Payee(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    plan_id = db.Column(db.Integer, db.ForeignKey('plan.id'), nullable=False)
+    created_date = db.Column(db.DateTime(timezone=True), default=func.now())
+
+    plan = db.relationship('Plan', backref=db.backref('payees', lazy=True, cascade="all, delete-orphan"))
+
+
 class Transaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.String(200), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     transaction_date = db.Column(db.DateTime(timezone=True), default=func.now())
     category_id = db.Column(db.Integer, db.ForeignKey('budget_category.id'), nullable=False)
+    payee_id = db.Column(db.Integer, db.ForeignKey('payee.id'), nullable=True)
     plan_id = db.Column(db.Integer, db.ForeignKey('plan.id'), nullable=False)
     created_date = db.Column(db.DateTime(timezone=True), default=func.now())
     
-    # Relationship
+    # Relationships
     plan = db.relationship('Plan', backref=db.backref('transactions', lazy=True, cascade="all, delete-orphan"))
+    payee = db.relationship('Payee', backref=db.backref('transactions', lazy=True))
 
 # User model updated for multi-plan support
 class User(db.Model, UserMixin):

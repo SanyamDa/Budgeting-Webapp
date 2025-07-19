@@ -2,7 +2,7 @@ from dateutil.relativedelta import relativedelta
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from werkzeug.security import generate_password_hash 
 from flask_login import login_required, current_user
-from .models import BudgetCategory, Transaction, Plan, MonthlyBudget, MonthlyRollover
+from .models import BudgetCategory, Transaction, Plan, MonthlyBudget, MonthlyRollover, Payee
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import func
 from . import db
@@ -415,6 +415,7 @@ def add_transaction():
         category_id = data.get('category_id')
         amount = float(data.get('amount', 0))
         description = data.get('description', 'Transaction')
+        payee_id = data.get('payee_id')
         
         category = BudgetCategory.query.filter_by(
             id=category_id,
@@ -429,6 +430,7 @@ def add_transaction():
             description=description,
             amount=-abs(amount),  # Make negative for expenses
             category_id=category_id,
+            payee_id=payee_id,
             plan_id=current_user.active_plan.id
         )
         
@@ -494,6 +496,134 @@ def create_category():
 def open_plan():
     """Display a list of all the user's plans."""
     return render_template('open_plan.html', plans=current_user.plans)
+
+
+# --------------------------- Payees API ---------------------------
+@views.route('/api/payees', methods=['GET', 'POST'])
+@login_required
+def manage_payees():
+    """GET: list payees; POST: create new payee"""
+    plan = current_user.active_plan
+    if not plan:
+        return jsonify({'success': False, 'error': 'No active plan'}), 400
+
+    if request.method == 'GET':
+        payees = [{'id': p.id, 'name': p.name} for p in plan.payees]
+        return jsonify({'success': True, 'payees': payees})
+
+    # POST
+    data = request.get_json()
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({'success': False, 'error': 'Name required'}), 400
+
+    if any(p.name.lower() == name.lower() for p in plan.payees):
+        return jsonify({'success': False, 'error': 'Payee already exists'}), 400
+
+    payee = Payee(name=name, plan_id=plan.id)
+    db.session.add(payee)
+    db.session.commit()
+    return jsonify({'success': True, 'payee': {'id': payee.id, 'name': payee.name}})
+
+@views.route('/api/payees/<int:payee_id>', methods=['DELETE'])
+@login_required
+def delete_payee(payee_id):
+    plan = current_user.active_plan
+    payee = Payee.query.filter_by(id=payee_id, plan_id=plan.id).first()
+    if not payee:
+        return jsonify({'success': False, 'error': 'Payee not found'}), 404
+    db.session.delete(payee)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+# -------------------------- Categories API ---------------------------
+@views.route('/api/categories', methods=['GET'])
+@login_required
+def get_categories():
+    """Get all categories for the current user's active plan"""
+    plan = current_user.active_plan
+    if not plan:
+        return jsonify({'success': False, 'error': 'No active plan'}), 400
+
+    categories = BudgetCategory.query.filter_by(plan_id=plan.id).all()
+    category_list = [{
+        'id': cat.id,
+        'name': cat.name,
+        'main_category': cat.main_category,
+        'icon': cat.icon
+    } for cat in categories]
+    
+    return jsonify({'success': True, 'categories': category_list})
+
+
+# -------------------------- Transaction Payee Update ---------------------------
+@views.route('/api/transactions/<int:tx_id>/set-payee', methods=['POST'])
+@login_required
+def set_transaction_payee(tx_id):
+    """Set or clear payee for a transaction"""
+    data = request.get_json()
+    payee_id = data.get('payee_id')  # may be null to clear
+
+    tx = Transaction.query.filter_by(id=tx_id, plan_id=current_user.active_plan.id).first()
+    if not tx:
+        return jsonify({'success': False, 'error': 'Transaction not found'}), 404
+
+    if payee_id:
+        payee = Payee.query.filter_by(id=payee_id, plan_id=current_user.active_plan.id).first()
+        if not payee:
+            return jsonify({'success': False, 'error': 'Payee not found'}), 404
+        tx.payee_id = payee_id
+    else:
+        tx.payee_id = None
+
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+# --------------------------- Transactions Page ---------------------------
+@views.route('/transactions')
+@login_required
+def transactions():
+    """Display the transactions summary page (placeholder until table implemented)."""
+    # Ensure the user has an active plan
+    plan = current_user.active_plan
+    if not plan:
+        flash("No active plan found.", 'error')
+        return redirect(url_for('views.home'))
+
+    # Calculate Monthly Allowance (income)
+    monthly_allowance = plan.monthly_income or 0.0
+
+    # Determine current month/year
+    today = datetime.datetime.now()
+    start_of_month = datetime.datetime(today.year, today.month, 1)
+    end_of_month = start_of_month + datetime.timedelta(days=32)
+    end_of_month = datetime.datetime(end_of_month.year, end_of_month.month, 1)
+
+    # Sum all transaction amounts for this plan in the current month (expenses are stored as negative)
+    activity_sum = db.session.query(func.sum(Transaction.amount)).filter(
+        Transaction.plan_id == plan.id,
+        Transaction.transaction_date >= start_of_month,
+        Transaction.transaction_date < end_of_month
+    ).scalar() or 0.0
+
+    activity_total = abs(activity_sum)  # Convert to positive value for display
+
+    available = monthly_allowance - activity_total
+
+    return render_template(
+        'transactions.html',
+        monthly_allowance=monthly_allowance,
+        activity_total=activity_total,
+        available=available,
+        transactions=db.session.query(Transaction).filter(
+            Transaction.plan_id==plan.id,
+            Transaction.transaction_date>=start_of_month,
+            Transaction.transaction_date<end_of_month
+        ).order_by(Transaction.transaction_date.desc()).all(),
+        payees=[{'id': p.id, 'name': p.name} for p in plan.payees]
+    )
 
 @views.route('/switch-plan/<int:plan_id>')
 @login_required
