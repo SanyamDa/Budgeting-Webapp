@@ -3,92 +3,459 @@
 {% block title %}Account Settings{% endblock %}
 
 {% block content %}
-<div class="container account-settings-page" style="max-width: 800px;">
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center pb-3 mb-4 border-bottom">
-        <h1 class="h2">Account Settings</h1>
+<style>
+/* Modern Account Settings Design */
+.account-settings-container {
+    min-height: 100vh;
+    padding: 2rem 0;
+}
+
+.account-settings-title {
+    color: white;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 2rem;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.account-settings-title i {
+    font-size: 2rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.settings-card {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.settings-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.settings-card-header {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.settings-card-body {
+    padding: 2rem;
+    color: #000 !important;
+}
+
+.settings-card-title {
+    color: white !important;
+    font-weight: 600;
+    font-size: 1.25rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.settings-card-title i {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: white;
+}
+
+.user-icon {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.security-icon {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.danger-icon {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+.glass-form-control {
+    background: rgba(255, 255, 255, 0.9) !important;
+    border: 2px solid rgba(102, 126, 234, 0.3) !important;
+    border-radius: 12px !important;
+    padding: 0.75rem 1rem !important;
+    color: #000 !important;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.glass-form-control:focus {
+    background: rgba(255, 255, 255, 1) !important;
+    border-color: #667eea !important;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2) !important;
+    transform: translateY(-2px);
+    color: #000 !important;
+    outline: none;
+}
+
+.glass-label {
+    color: #FFFFFF !important;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+    display: block;
+}
+
+.modern-btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border: none !important;
+    color: white !important;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.modern-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    color: white !important;
+}
+
+.modern-btn-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
+    border: none !important;
+    color: white !important;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+}
+
+.modern-btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(108, 117, 125, 0.4);
+    color: white !important;
+}
+
+.modern-btn-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+    border: none !important;
+    color: white !important;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+}
+
+.modern-btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
+    color: white !important;
+}
+
+.user-info-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+}
+
+.user-email {
+    color: white !important;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.logout-link {
+    color: #ffc107 !important;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.logout-link:hover {
+    color: #ffca2c !important;
+    text-decoration: none;
+    transform: translateX(5px);
+}
+
+.input-group-modern {
+    display: flex;
+    gap: 1rem;
+    align-items: stretch;
+    margin-top: 1rem;
+}
+
+.input-group-modern .form-control {
+    flex: 1;
+    border-radius: 8px;
+    border: 2px solid rgba(102, 126, 234, 0.3);
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.9);
+    transition: all 0.3s ease;
+    color: #000 !important;
+    font-size: 0.95rem;
+}
+
+.input-group-modern .form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+    background: white;
+    outline: none;
+}
+
+.password-toggle {
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(102, 126, 234, 0.3);
+    border-left: none;
+    border-radius: 0 8px 8px 0;
+    padding: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #000;
+}
+
+.social-login-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.social-login-item:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+.google-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    padding: 4px;
+    background: white;
+}
+
+.social-user-name {
+    color: white !important;
+    font-weight: 500;
+    flex-grow: 1;
+}
+
+.disconnect-link {
+    color: #ff6b6b !important;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.disconnect-link:hover {
+    color: #ff5252 !important;
+    text-decoration: none;
+    transform: translateX(-5px);
+}
+
+.danger-zone {
+    border: 2px solid rgba(220, 53, 69, 0.3) !important;
+    background: rgba(220, 53, 69, 0.05) !important;
+}
+
+.danger-zone .settings-card-header {
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.2) 0%, rgba(200, 35, 51, 0.1) 100%);
+}
+
+.warning-text {
+    color: #FFFFFF !important;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.warning-text strong {
+    color: #dc3545 !important;
+}
+
+.password-link {
+    color: #667eea !important;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.password-link:hover {
+    color: #5a6fd8 !important;
+    text-decoration: underline;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .account-settings-container {
+        padding: 1rem;
+    }
+    
+    .settings-card-body {
+        padding: 1.5rem;
+    }
+    
+    .user-info-section {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+}
+</style>
+
+<div class="account-settings-container">
+  <div class="container" style="max-width: 800px;">
+    <h1 class="account-settings-title">
+      <i class="bx bx-user-circle"></i> Account Settings
+    </h1>
+
+    <!-- User Info Section -->
+    <div class="user-info-section">
+        <span class="user-email">{{ current_user.email }}</span>
+        <a href="/logout" class="logout-link">
+            <i class="bx bx-log-out"></i> Log Out
+        </a>
     </div>
 
-    <!-- User Info & First Name -->
-    <div class="mb-5">
-        <div class="d-flex align-items-center mb-4">
-            <span class="mr-3 font-weight-bold">{{ current_user.email }}</span>
-            <a href="/logout">Log Out</a>
+    <!-- User Profile Card -->
+    <div class="settings-card">
+        <div class="settings-card-header">
+            <h2 class="settings-card-title">
+                <i class="bx bx-user user-icon"></i>
+                User Profile
+            </h2>
         </div>
-        <div class="card">
-            <div class="card-body d-flex justify-content-between align-items-center">
-                <div>
-                    <h5 class="card-title mb-1">First Name</h5>
-                    <p class="card-text text-muted">We use your first name to personalize your experience.</p>
-                    <input type="text" class="form-control mt-3" id="firstName" value="{{ current_user.first_name }}" style="max-width: 300px;">
+        <div class="settings-card-body">
+            <p class="mb-3" style="color: #FFFFFF;">Personalize your account with your information.</p>
+            <div class="row align-items-end">
+                <div class="col-md-8">
+                    <label for="firstName" class="glass-label">First Name</label>
+                    <input type="text" class="glass-form-control" id="firstName" value="{{ current_user.first_name }}" placeholder="Enter your first name">
                 </div>
-                <button class="btn btn-primary" style="background-color: #e9ecef; border-color: #e9ecef; color: #6c757d;">Save</button>
+                <div class="col-md-4">
+                    <button class="modern-btn-primary w-100">
+                        <i class="bx bx-check"></i> Save
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <hr class="my-5">
-
-    <!-- Login Methods -->
-    <div class="mb-4">
-        <h2 class="h4 mb-3">Login Methods</h2>
-        <!-- Set a Password Section -->
-        <div class="card bg-light mb-4">
-            <div class="card-body text-center">
-                <h5 class="card-title">Set a Password</h5>
-                <p class="card-text text-muted">Optionally set a password to enable an additional login method, or to edit your account email.</p>
+    <!-- Login Methods Card -->
+    <div class="settings-card">
+        <div class="settings-card-header">
+            <h2 class="settings-card-title">
+                <i class="bx bx-shield-check security-icon"></i>
+                Login Methods
+            </h2>
+        </div>
+        <div class="settings-card-body">
+            <p class="mb-4" style="color: #FFFFFF;">Manage your login options and account security.</p>
+            <!-- Email Section -->
+            <div class="mb-4">
+                <label for="email" class="glass-label">Email Address</label>
+                <input type="email" readonly class="glass-form-control" id="email" value="{{ current_user.email }}" style="background: rgba(255, 255, 255, 0.6) !important; cursor: not-allowed;">
+                <small style="color: #FFFFFF; font-size: 0.85rem;">Your email address is managed through your login provider.</small>
             </div>
-        </div>
-        <div class="form-group">
-            <label for="email" class="font-weight-bold">Email</label>
-            <input type="email" readonly class="form-control-plaintext" id="email" value="{{ current_user.email }}">
-        </div>
-        <form method="POST" action="{{ url_for('views.set_password') }}">
-            <div class="form-group">
-                <label for="password" class="font-weight-bold">Password:</label>
-                <div class="input-group" style="max-width: 400px;">
-                    <input type="password" class="form-control" id="password" name="password" required minlength="7">
-                    <div class="input-group-append">
-                        <div class="input-group-text">
+
+            <!-- Password Section -->
+            <form method="POST" action="{{ url_for('views.set_password') }}">
+                <div class="mb-4">
+                    <label for="password" class="glass-label">Set Password</label>
+                    <div class="input-group-modern" style="max-width: 500px;">
+                        <input type="password" class="form-control" id="password" name="password" required minlength="7" placeholder="Enter a secure password (min 7 characters)">
+                        <div class="password-toggle">
                             <input type="checkbox" id="showPassword">
-                            <label class="form-check-label mb-0 ml-2" for="showPassword">Show</label>
+                            <label class="mb-0" for="showPassword" style="font-size: 0.85rem;">Show</label>
                         </div>
                     </div>
+                    <small style="color: #FFFFFF; font-size: 0.85rem;">Optional: Set a password for additional login security.</small>
                 </div>
-            </div>
-            <button type="submit" class="btn btn-secondary mb-4">Set Password</button>
-        </form>
+                <button type="submit" class="modern-btn-secondary mb-4">
+                    <i class="bx bx-lock"></i> Set Password
+                </button>
+            </form>
 
-        <!-- Social Logins -->
-        <div>
-            <label class="d-block mb-3 font-weight-bold">Google</label>
-            <div class="d-flex align-items-center">
-                <img src="https://img.icons8.com/color/48/000000/google-logo.png" alt="Google" style="width: 24px; height: 24px;" class="mr-3"/>
-                <span>{{ current_user.first_name }}</span>
-                <a href="{{ url_for('views.disconnect_google') }}" class="ml-auto">Disconnect</a>
+            <!-- Social Logins Section -->
+            <div class="mb-4">
+                <label class="glass-label mb-3">Connected Accounts</label>
+                <div class="social-login-item">
+                    <img src="https://img.icons8.com/color/48/000000/google-logo.png" alt="Google" class="google-icon"/>
+                    <div class="social-user-name">
+                        <strong>Google</strong><br>
+                        <small style="color: rgba(255,255,255,0.8);">{{ current_user.first_name }}</small>
+                    </div>
+                    <a href="{{ url_for('views.disconnect_google') }}" class="disconnect-link">
+                        <i class="bx bx-unlink"></i> Disconnect
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 
-    <hr class="my-5">
-
-    <!-- Delete Account -->
-    <div class="mb-5">
-        <h2 class="h4 mb-3">Delete Account</h2>
-        <div class="card border-danger">
-            <div class="card-body text-danger d-flex justify-content-between align-items-center">
-                <div>
-                    <p class="card-text mb-2">
-                        Delete your account if you no longer wish to use the app (and want all of your account and plan data <strong>permanently deleted</strong>).
-                    </p>
-                    <p class="card-text mb-0">
-                        Before you can delete your account, you need to <a href="#">set an account password</a>. Your password will be required to confirm deletion.
-                    </p>
+    <!-- Delete Account - Danger Zone -->
+    <div class="settings-card danger-zone">
+        <div class="settings-card-header">
+            <h2 class="settings-card-title">
+                <i class="bx bx-error-circle danger-icon"></i>
+                Danger Zone
+            </h2>
+        </div>
+        <div class="settings-card-body">
+            <p class="mb-3" style="color: #FFFFFF;">Permanently delete your account and all associated data.</p>
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="warning-text">
+                        <p class="mb-2">
+                            <strong>⚠️ Warning:</strong> This action cannot be undone. Deleting your account will <strong>permanently remove</strong>:
+                        </p>
+                        <ul class="mb-3" style="color: #FFFFFF; font-size: 0.9rem;">
+                            <li>All your budget plans and categories</li>
+                            <li>Transaction history and financial data</li>
+                            <li>Account preferences and settings</li>
+                            <li>Connected login methods</li>
+                        </ul>
+                        <p class="mb-0">
+                            Before deletion, you must <a href="#" class="password-link">set an account password</a>. Your password will be required to confirm this action.
+                        </p>
+                    </div>
                 </div>
-                <button class="btn btn-outline-danger ml-4">Delete<br>Account</button>
+                <div class="col-md-4 text-center">
+                    <button class="modern-btn-danger">
+                        <i class="bx bx-trash"></i><br>
+                        Delete Account
+                    </button>
+                </div>
             </div>
         </div>
     </div>
+  </div>
 </div>
 {% endblock %}
 

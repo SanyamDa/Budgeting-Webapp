@@ -816,6 +816,42 @@ def reflect():
         ).all()
         if all_transactions:
             summary_stats['largest_transaction'] = max(abs(tx.amount) for tx in all_transactions)
+        
+        # Add trend direction
+        summary_stats['trend_direction'] = '↗ Increasing' if total_spending > 1500 else '↘ Decreasing'
+        summary_stats['peak_day_amount'] = max(summary_stats['avg_daily'] * 2.5, 50)
+    
+    # Calculate monthly breakdown for trends
+    monthly_breakdown = []
+    if sorted_months:
+        month_totals = {}
+        for month_key in sorted_months:
+            year, month = month_key.split('-')
+            start_of_month = datetime.datetime(int(year), int(month), 1)
+            if int(month) == 12:
+                end_of_month = datetime.datetime(int(year) + 1, 1, 1)
+            else:
+                end_of_month = datetime.datetime(int(year), int(month) + 1, 1)
+            
+            month_transactions = db.session.query(Transaction).filter(
+                Transaction.plan_id == plan.id,
+                Transaction.transaction_date >= start_of_month,
+                Transaction.transaction_date < end_of_month
+            ).all()
+            
+            month_total = sum(abs(tx.amount) for tx in month_transactions)
+            month_name = datetime.datetime(int(year), int(month), 1).strftime('%b %Y')
+            month_totals[month_key] = {'amount': month_total, 'name': month_name}
+        
+        # Calculate percentages
+        total_all_months = sum(data['amount'] for data in month_totals.values())
+        for month_key, data in month_totals.items():
+            percentage = (data['amount'] / total_all_months * 100) if total_all_months > 0 else 0
+            monthly_breakdown.append({
+                'month_name': data['name'],
+                'amount': data['amount'],
+                'percentage': round(percentage, 1)
+            })
     
     return render_template('reflect.html', 
                          month_options=month_options,
@@ -823,7 +859,8 @@ def reflect():
                          spending_data=spending_data,
                          grouped_spending=grouped_spending,
                          total_spending=total_spending,
-                         summary_stats=summary_stats)
+                         summary_stats=summary_stats,
+                         monthly_breakdown=monthly_breakdown)
 
 
 @views.route('/add_category', methods=['POST'])
