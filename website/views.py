@@ -823,6 +823,8 @@ def reflect():
     
     # Calculate monthly breakdown for trends
     monthly_breakdown = []
+    daily_spending_data = []
+    
     if sorted_months:
         month_totals = {}
         for month_key in sorted_months:
@@ -853,6 +855,63 @@ def reflect():
                 'percentage': round(percentage, 1)
             })
     
+    # Calculate real daily spending data for current month
+    if current_month:
+        year, month = current_month.split('-')
+        start_of_month = datetime.datetime(int(year), int(month), 1)
+        if int(month) == 12:
+            end_of_month = datetime.datetime(int(year) + 1, 1, 1)
+        else:
+            end_of_month = datetime.datetime(int(year), int(month) + 1, 1)
+        
+        # Get all transactions for the current month
+        current_month_transactions = db.session.query(Transaction).filter(
+            Transaction.plan_id == plan.id,
+            Transaction.transaction_date >= start_of_month,
+            Transaction.transaction_date < end_of_month
+        ).all()
+        
+        # Group transactions by day
+        daily_totals = {}
+        for tx in current_month_transactions:
+            day_key = tx.transaction_date.day
+            if day_key not in daily_totals:
+                daily_totals[day_key] = 0
+            daily_totals[day_key] += abs(tx.amount)
+        
+        # Create daily spending data array
+        import calendar
+        days_in_month = calendar.monthrange(int(year), int(month))[1]
+        for day in range(1, days_in_month + 1):
+            daily_spending_data.append({
+                'day': day,
+                'amount': daily_totals.get(day, 0)
+            })
+        
+        # Create category-filtered daily spending data
+        daily_spending_by_category = {'needs': [], 'wants': [], 'investments': []}
+        
+        for category in ['needs', 'wants', 'investments']:
+            category_daily_totals = {}
+            
+            # Filter transactions by category
+            category_transactions = [tx for tx in current_month_transactions 
+                                   if tx.category.main_category == category]
+            
+            # Group by day
+            for tx in category_transactions:
+                day_key = tx.transaction_date.day
+                if day_key not in category_daily_totals:
+                    category_daily_totals[day_key] = 0
+                category_daily_totals[day_key] += abs(tx.amount)
+            
+            # Create daily array for this category
+            for day in range(1, days_in_month + 1):
+                daily_spending_by_category[category].append({
+                    'day': day,
+                    'amount': category_daily_totals.get(day, 0)
+                })
+    
     return render_template('reflect.html', 
                          month_options=month_options,
                          current_month=current_month,
@@ -860,7 +919,22 @@ def reflect():
                          grouped_spending=grouped_spending,
                          total_spending=total_spending,
                          summary_stats=summary_stats,
-                         monthly_breakdown=monthly_breakdown)
+                         monthly_breakdown=monthly_breakdown,
+                         daily_spending_data=daily_spending_data,
+                         daily_spending_by_category=daily_spending_by_category)
+
+
+@views.route('/receipt_ai')
+@login_required
+def receipt_ai():
+    """Receipt AI page for uploading and processing receipt images"""
+    # Get user's categories for the dropdown
+    plan = current_user.active_plan
+    categories = []
+    if plan:
+        categories = BudgetCategory.query.filter_by(plan_id=plan.id).all()
+    
+    return render_template('receipt_ai.html', categories=categories)
 
 
 @views.route('/add_category', methods=['POST'])

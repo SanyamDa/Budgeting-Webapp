@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+
+{% block title %}Receipt AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">
+                    <i class='bx bx-camera mr-2'></i>Receipt AI
+                </h2>
+                <small class="text-muted">Upload receipts and let AI create transactions automatically</small>
+            </div>
+
+            <!-- Upload Section -->
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <div class="card shadow-sm" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 15px;">
+                        <div class="card-body p-5">
+                            <!-- Upload Area -->
+                            <div id="uploadArea" class="upload-area text-center p-5 mb-4" style="border: 2px dashed rgba(255, 255, 255, 0.3); border-radius: 10px; cursor: pointer; transition: all 0.3s ease;">
+                                <i class='bx bx-cloud-upload' style="font-size: 4rem; color: rgba(255, 255, 255, 0.6); margin-bottom: 1rem;"></i>
+                                <h4 class="mb-2">Drop your receipt here</h4>
+                                <p class="text-muted mb-3">or click to browse files</p>
+                                <button type="button" class="btn btn-primary">
+                                    <i class='bx bx-upload mr-2'></i>Choose File
+                                </button>
+                                <input type="file" id="receiptFile" accept="image/*" style="display: none;">
+                            </div>
+
+                            <!-- Preview Section (Hidden initially) -->
+                            <div id="previewSection" class="d-none">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h5 class="mb-3">Receipt Preview</h5>
+                                        <div class="preview-container" style="border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 10px; overflow: hidden;">
+                                            <img id="previewImage" class="img-fluid" style="max-height: 400px; width: 100%; object-fit: contain;">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h5 class="mb-3">Processing Status</h5>
+                                        <div id="processingStatus" class="mb-4">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <div class="spinner-border spinner-border-sm mr-2" role="status" style="display: none;">
+                                                    <span class="sr-only">Loading...</span>
+                                                </div>
+                                                <span id="statusText">Ready to process</span>
+                                            </div>
+                                            <div class="progress mb-3" style="height: 6px;">
+                                                <div id="progressBar" class="progress-bar bg-primary" role="progressbar" style="width: 0%"></div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Extracted Data (Hidden initially) -->
+                                        <div id="extractedData" class="d-none">
+                                            <h6 class="mb-3">Extracted Information</h6>
+                                            <div class="form-group">
+                                                <label for="merchantName">Merchant</label>
+                                                <input type="text" class="form-control" id="merchantName" placeholder="Auto-detected merchant name">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="amount">Amount (฿)</label>
+                                                <input type="number" class="form-control" id="amount" step="0.01" placeholder="฿0.00">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="date">Date</label>
+                                                <input type="date" class="form-control" id="date">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="category">Category</label>
+                                                <select class="form-control" id="category">
+                                                    <option value="">Select category...</option>
+                                                    {% for category in categories %}
+                                                    <option value="{{ category.id }}">{{ category.main_category|title }} - {{ category.name|title }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="text-center mt-4">
+                                    <button type="button" id="processBtn" class="btn btn-success mr-3">
+                                        <i class='bx bx-brain mr-2'></i>Process with AI
+                                    </button>
+                                    <button type="button" id="createTransactionBtn" class="btn btn-primary mr-3 d-none">
+                                        <i class='bx bx-plus mr-2'></i>Create Transaction
+                                    </button>
+                                    <button type="button" id="resetBtn" class="btn btn-secondary">
+                                        <i class='bx bx-refresh mr-2'></i>Upload Another
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Uploads Section -->
+            <div class="row mt-5">
+                <div class="col-12">
+                    <h4 class="mb-3">Recent AI Transactions</h4>
+                    <div class="card shadow-sm" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 15px;">
+                        <div class="card-body">
+                            <div id="recentTransactions" class="text-center text-muted py-4">
+                                <i class='bx bx-receipt' style="font-size: 2rem; opacity: 0.5;"></i>
+                                <p class="mb-0 mt-2">No AI-generated transactions yet</p>
+                                <small>Upload your first receipt to get started!</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.upload-area:hover {
+    border-color: rgba(255, 255, 255, 0.5) !important;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.preview-container {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.form-control {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.form-control:focus {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: #007bff;
+    color: white;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-control::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+label {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('receiptFile');
+    const previewSection = document.getElementById('previewSection');
+    const previewImage = document.getElementById('previewImage');
+    const processBtn = document.getElementById('processBtn');
+    const createTransactionBtn = document.getElementById('createTransactionBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const statusText = document.getElementById('statusText');
+    const progressBar = document.getElementById('progressBar');
+    const extractedData = document.getElementById('extractedData');
+
+    // File upload handling
+    uploadArea.addEventListener('click', () => fileInput.click());
+    
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+        uploadArea.style.background = 'rgba(255, 255, 255, 0.05)';
+    });
+
+    uploadArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+        uploadArea.style.background = 'transparent';
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+        uploadArea.style.background = 'transparent';
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileUpload(files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFileUpload(e.target.files[0]);
+        }
+    });
+
+    function handleFileUpload(file) {
+        if (!file.type.startsWith('image/')) {
+            alert('Please upload an image file');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            previewImage.src = e.target.result;
+            uploadArea.style.display = 'none';
+            previewSection.classList.remove('d-none');
+            statusText.textContent = 'Image uploaded successfully';
+            progressBar.style.width = '25%';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // Process button
+    processBtn.addEventListener('click', function() {
+        // Simulate AI processing
+        statusText.textContent = 'Processing with AI...';
+        progressBar.style.width = '50%';
+        document.querySelector('.spinner-border').style.display = 'inline-block';
+        
+        // Simulate processing delay
+        setTimeout(() => {
+            statusText.textContent = 'Extraction complete!';
+            progressBar.style.width = '100%';
+            document.querySelector('.spinner-border').style.display = 'none';
+            
+            // Show extracted data with mock values (improved for Thailand receipt)
+            document.getElementById('merchantName').value = 'Starbucks Coffee';
+            document.getElementById('amount').value = '145.00';
+            document.getElementById('date').value = new Date().toISOString().split('T')[0];
+            // Auto-select first category if available
+            const categorySelect = document.getElementById('category');
+            if (categorySelect.options.length > 1) {
+                categorySelect.selectedIndex = 1;
+            }
+            
+            extractedData.classList.remove('d-none');
+            processBtn.classList.add('d-none');
+            createTransactionBtn.classList.remove('d-none');
+        }, 3000);
+    });
+
+    // Create transaction button
+    createTransactionBtn.addEventListener('click', function() {
+        const merchantName = document.getElementById('merchantName').value;
+        const amount = document.getElementById('amount').value;
+        const date = document.getElementById('date').value;
+        const categoryId = document.getElementById('category').value;
+        
+        if (!merchantName || !amount || !date || !categoryId) {
+            alert('Please fill in all fields before creating the transaction.');
+            return;
+        }
+        
+        // TODO: Send data to backend to create transaction
+        alert(`Transaction created: ฿${amount} at ${merchantName} on ${date}`);
+        resetForm();
+    });
+
+    // Reset button
+    resetBtn.addEventListener('click', resetForm);
+
+    function resetForm() {
+        uploadArea.style.display = 'block';
+        previewSection.classList.add('d-none');
+        extractedData.classList.add('d-none');
+        processBtn.classList.remove('d-none');
+        createTransactionBtn.classList.add('d-none');
+        statusText.textContent = 'Ready to process';
+        progressBar.style.width = '0%';
+        fileInput.value = '';
+    }
+});
+</script>
+{% endblock %}

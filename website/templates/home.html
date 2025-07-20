@@ -24,7 +24,7 @@
         </div>
         <div class="total-assigned-card">
             <h5 class="card-title">Money Remaining</h5>
-            <p class="card-text">${{ "%.2f"|format(available_amount) }}</p>
+            <p class="card-text">฿{{ "%.2f"|format(available_amount) }}</p>
         </div>
     </div>
 
@@ -56,20 +56,20 @@
                             </span>
                             <strong>{{ main_category.capitalize() }}</strong>
                         </td>
-                        <td class="col-assigned"><strong>${{ "%.2f"|format(category_totals[main_category]['assigned']) }}</strong></td>
-                        <td class="col-activity"><strong>${{ "%.2f"|format(category_totals[main_category]['spent']) }}</strong></td>
-                        <td class="col-available"><strong>${{ "%.2f"|format(category_totals[main_category]['available']) }}</strong></td>
+                        <td class="col-assigned"><strong>฿{{ "%.2f"|format(category_totals[main_category]['assigned']) }}</strong></td>
+                        <td class="col-activity"><strong>฿{{ "%.2f"|format(category_totals[main_category]['spent']) }}</strong></td>
+                        <td class="col-available"><strong>฿{{ "%.2f"|format(category_totals[main_category]['available']) }}</strong></td>
                     </tr>
                     {%- for sub in sub_categories %}
                     <tr class="sub-category-row sub-{{ main_category|replace(' ', '-') }} collapse show">
                         <td class="pl-4">
                             {{ sub.name }}
                         </td>
-                        <td class="col-assigned assigned-value" data-category-id="{{ sub.id }}" data-current-amount="{{ sub.assigned_amount }}" data-category-name="{{ sub.name }}" style="cursor:pointer;">${{ "%.2f"|format(sub.assigned_amount) }}</td>
-                        <td class="col-activity">${{ "%.2f"|format(sub.spent_amount) }}</td>
+                        <td class="col-assigned assigned-value" data-category-id="{{ sub.id }}" data-current-amount="{{ sub.assigned_amount }}" data-category-name="{{ sub.name }}" style="cursor:pointer;">฿{{ "%.2f"|format(sub.assigned_amount) }}</td>
+                        <td class="col-activity">฿{{ "%.2f"|format(sub.spent_amount) }}</td>
                         <td class="col-available">
                             <span class="money-badge {% if sub.available_amount > 0 %}positive{% elif sub.available_amount == 0 %}zero{% else %}negative{% endif %}">
-                                ${{ "%.2f"|format(sub.available_amount) }}
+                                ฿{{ "%.2f"|format(sub.available_amount) }}
                             </span>
                         </td>
                     </tr>
@@ -92,15 +92,15 @@
                 <div class="summary-body">
                     <div class="summary-item">
                         <span>Left Over from Last Month</span>
-                        <span class="amount">${{ "%.2f"|format(rollover_amount) }}</span>
+                        <span class="amount">฿{{ "%.2f"|format(rollover_amount) }}</span>
                     </div>
                     <div class="summary-item" id="assigned-this-month">
                         <span>Assigned in {{ current_month }}</span>
-                        <span class="amount">${{ "%.2f"|format(total_assigned) }}</span>
+                        <span class="amount">฿{{ "%.2f"|format(total_assigned) }}</span>
                     </div>
                     <div class="summary-item">
                         <span>Activity</span>
-                        <span class="amount">-${{ "%.2f"|format(total_spent) }}</span>
+                        <span class="amount">-฿{{ "%.2f"|format(total_spent) }}</span>
                     </div>
                     <hr class="summary-divider">
                     <div class="summary-item summary-total">

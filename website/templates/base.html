@@ -78,6 +78,11 @@
                     <i class='bx bx-bar-chart-alt-2'></i> <span class="sidebar-text">Reflect</span>
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.path == url_for('views.receipt_ai') %}active{% endif %}" href="{{ url_for('views.receipt_ai') }}">
+                    <i class='bx bx-camera'></i> <span class="sidebar-text">Receipt AI</span>
+                </a>
+            </li>
 
         </ul>
 

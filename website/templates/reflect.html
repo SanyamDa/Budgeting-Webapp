@@ -173,23 +173,17 @@
             <!-- Header with Controls -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h4 class="mb-0 text-white">Spending Trends</h4>
-                <div class="d-flex" style="gap: 1rem;">
-                    <button class="btn btn-outline-primary btn-sm" id="exportBtn">
-                        <i class="bx bx-export"></i> Export
-                    </button>
-                    <select class="form-select form-select-sm" id="trendsMonthSelector" style="width: auto;">
+                <div class="d-flex mb-4" style="gap: 2rem;">
+                    <select class="form-select glass-select" id="trendsMonthSelector">
                         {% for month in month_options %}
                         <option value="{{ month.value }}" {% if month.value == current_month %}selected{% endif %}>{{ month.display }}</option>
                         {% endfor %}
                     </select>
-                    <select class="form-select form-select-sm" id="trendsCategorySelector" style="width: auto;">
+                    <select class="form-select glass-select" id="trendsCategorySelector">
                         <option value="all">All Categories</option>
                         <option value="needs">Needs</option>
                         <option value="wants">Wants</option>
                         <option value="investments">Investments</option>
-                    </select>
-                    <select class="form-select form-select-sm" style="width: auto;">
-                        <option>All Accounts</option>
                     </select>
                 </div>
             </div>
@@ -235,7 +229,7 @@
                                     <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
                                         <th class="px-4 py-3 text-muted" style="font-weight: 500;">Month</th>
                                         <th class="px-4 py-3 text-muted text-right" style="font-weight: 500;">Total Spending</th>
-                                        <th class="px-4 py-3 text-muted text-right" style="font-weight: 500;">Compared to Average <i class="bx bx-info-circle" style="font-size: 0.9rem;"></i></th>
+                                        <th class="px-4 py-3 text-muted text-right" style="font-weight: 500;">Compared to Average <i class="bx bx-info-circle" style="font-size: 0.9rem;" title="Shows how much more or less you spent this month compared to your average monthly spending. Since this is your first month, the average is the same as your total spending." data-toggle="tooltip" data-placement="top"></i></th>
                                     </tr>
                                 </thead>
                                 <tbody id="trendsTableBody">
@@ -273,6 +267,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Get data from backend
     const allSpendingData = {{ spending_data | tojson }};
     const groupedSpending = {{ grouped_spending | tojson }};
+    const dailySpendingData = {{ daily_spending_data | tojson }};
+    const dailySpendingByCategory = {{ daily_spending_by_category | tojson }};
     
     // Initialize pie chart
     const ctx = document.getElementById('spendingPieChart').getContext('2d');
@@ -405,30 +401,34 @@ document.addEventListener('DOMContentLoaded', function() {
             trendsChart.destroy();
         }
         
-        // Generate sample daily data for the selected month
-        const daysInMonth = new Date(2025, 6, 0).getDate(); // July 2025
+        // Use real daily spending data from backend
         const dailyData = [];
         const labels = [];
         
-        // Create daily spending data
-        for (let day = 1; day <= daysInMonth; day++) {
-            labels.push(`${day}`);
-            // Generate realistic daily spending pattern
-            let dailyAmount = 0;
-            if (data && data.length > 0) {
-                // Distribute total spending across days with some randomness
-                const totalAmount = data.reduce((sum, item) => sum + item.amount, 0);
-                const avgDaily = totalAmount / daysInMonth;
-                // Add some variation (weekends higher, some days zero)
-                const dayOfWeek = new Date(2025, 6, day).getDay();
-                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-                const variation = (Math.random() - 0.5) * 0.6;
-                dailyAmount = Math.max(0, avgDaily * (1 + variation) * (isWeekend ? 1.3 : 1));
-                
-                // Some days have no spending
-                if (Math.random() < 0.2) dailyAmount = 0;
+        // Create daily spending data from real transactions
+        // Use category-filtered data if a specific category is selected
+        let dataToUse = dailySpendingData;
+        
+        // Check if we need to filter by category
+        const categorySelector = document.getElementById('trendsCategorySelector');
+        if (categorySelector && categorySelector.value !== 'all') {
+            const selectedCategory = categorySelector.value;
+            if (dailySpendingByCategory && dailySpendingByCategory[selectedCategory]) {
+                dataToUse = dailySpendingByCategory[selectedCategory];
             }
-            dailyData.push(Math.round(dailyAmount * 100) / 100);
+        }
+        
+        if (dataToUse && dataToUse.length > 0) {
+            dataToUse.forEach(dayData => {
+                labels.push(dayData.day.toString());
+                dailyData.push(dayData.amount);
+            });
+        } else {
+            // Fallback if no data
+            for (let day = 1; day <= 31; day++) {
+                labels.push(day.toString());
+                dailyData.push(0);
+            }
         }
         
         trendsChart = new Chart(trendsCtx.getContext('2d'), {
@@ -517,10 +517,23 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    function updateTrendsStats(data) {
-        if (!data || data.length === 0) return;
+    function updateTrendsStats(categoryFilter = 'all') {
+        // Calculate stats based on selected category
+        let totalAmount = 0;
         
-        const totalAmount = data.reduce((sum, item) => sum + item.amount, 0);
+        if (categoryFilter === 'all') {
+            // Use all spending data
+            if (dailySpendingData && dailySpendingData.length > 0) {
+                totalAmount = dailySpendingData.reduce((sum, dayData) => sum + dayData.amount, 0);
+            }
+        } else {
+            // Use category-filtered data
+            if (dailySpendingByCategory && dailySpendingByCategory[categoryFilter]) {
+                totalAmount = dailySpendingByCategory[categoryFilter].reduce((sum, dayData) => sum + dayData.amount, 0);
+            }
+        }
+        
+        // For now, average monthly is just the current month's total (first month)
         const avgMonthly = totalAmount;
         const avgDaily = avgMonthly / 30;
         
@@ -545,9 +558,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (trendsCategorySelector) {
         trendsCategorySelector.addEventListener('change', function() {
             const selectedCategory = this.value;
-            const filteredData = filterDataByCategory(selectedCategory);
-            initializeTrendsChart(filteredData);
-            updateTrendsStats(filteredData);
+            // Re-initialize chart with category filtering
+            initializeTrendsChart();
+            updateTrendsStats(selectedCategory);
         });
     }
     
@@ -559,8 +572,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Initialize trends chart when page loads
-    initializeTrendsChart(allSpendingData);
-    updateTrendsStats(allSpendingData);
+    initializeTrendsChart();
+    updateTrendsStats('all');
+    
+    // Initialize Bootstrap tooltips
+    $(function () {
+        $('[data-toggle="tooltip"]').tooltip();
+    });
 });
 </script>
 {% endblock %}
