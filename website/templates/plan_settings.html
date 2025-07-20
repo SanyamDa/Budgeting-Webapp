@@ -3,243 +3,511 @@
 
 {% block content %}
 <style>
-/* Fix text readability in plan settings - Override dark theme with higher specificity */
-
-/* Light theme specific styles */
-[data-theme='light'] .card-body,
-[data-theme='light'] .card-body *,
-.card-body,
-.card-body * {
-    color: #333 !important;
+/* Modern Plan Settings Design */
+.plan-settings-container {
+    min-height: 100vh;
+    padding: 2rem 0;
 }
 
-[data-theme='light'] .card-body label,
-.card-body label {
-    color: #333 !important;
-    font-weight: 500;
+.plan-settings-title {
+    color: white;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 2rem;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
-[data-theme='light'] .card-body .form-control,
-.card-body .form-control {
-    color: #333 !important;
-    background-color: #fff !important;
+.settings-card {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    overflow: hidden;
 }
 
-[data-theme='light'] .card-header .btn-link,
-.card-header .btn-link {
-    color: #333 !important;
+.settings-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.settings-card-header {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 1.5rem;
+}
+
+.settings-card-header .btn-link {
+    color: white !important;
+    font-weight: 600;
+    font-size: 1.1rem;
     text-decoration: none;
+    width: 100%;
+    text-align: left;
+    padding: 0;
+    border: none;
+    background: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-[data-theme='light'] .card-header .btn-link:hover,
-.card-header .btn-link:hover {
-    color: #007bff !important;
+.settings-card-header .btn-link:hover {
+    color: rgba(255, 255, 255, 0.8) !important;
 }
 
-[data-theme='light'] .list-group-item,
-.list-group-item {
-    color: #333 !important;
-    background-color: #fff !important;
+.settings-card-header .btn-link i {
+    transition: transform 0.3s ease;
+    color: rgba(255, 255, 255, 0.7);
 }
 
-[data-theme='light'] .text-muted,
-.text-muted {
-    color: #6c757d !important;
+.settings-card-header .btn-link[aria-expanded="true"] i {
+    transform: rotate(180deg);
 }
 
-[data-theme='light'] .subcategory-item,
-.subcategory-item {
-    background-color: #f8f9fa !important;
-    border: 1px solid #dee2e6;
-    color: #333 !important;
+.settings-card-body {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 2rem;
+    color: #333;
 }
 
-/* Force plan settings page text to be dark in light mode */
-[data-theme='light'] #planSettingsAccordion .card *:not(.btn),
-#planSettingsAccordion .card *:not(.btn) {
-    color: #333 !important;
+.glass-form-control {
+    background: rgba(255, 255, 255, 0.9) !important;
+    border: 2px solid rgba(102, 126, 234, 0.3) !important;
+    border-radius: 12px !important;
+    padding: 0.75rem 1rem !important;
+    color: #000 !important;
+    font-weight: 500;
+    transition: all 0.3s ease;
 }
 
-[data-theme='light'] #planSettingsAccordion .form-control,
-#planSettingsAccordion .form-control {
-    color: #333 !important;
-    background-color: #fff !important;
+.glass-form-control:focus {
+    background: rgba(255, 255, 255, 1) !important;
+    border-color: #667eea !important;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2) !important;
+    transform: translateY(-2px);
+    color: #000 !important;
 }
 
-[data-theme='light'] #planSettingsAccordion .form-label,
-#planSettingsAccordion .form-label {
-    color: #333 !important;
+/* Force all input text to be black with maximum specificity */
+.plan-settings-container input[type="text"],
+.plan-settings-container input[type="number"],
+.plan-settings-container .form-control,
+.plan-settings-container .glass-form-control {
+    color: #000 !important;
 }
 
-/* Fix main category headers (Needs, Wants, Investments) - Maximum specificity */
-[data-theme='light'] #planSettingsAccordion .card-header h2,
-[data-theme='light'] #planSettingsAccordion .card-header .btn-link,
-[data-theme='light'] #planSettingsAccordion .card-header .btn-link span,
-[data-theme='light'] #planSettingsAccordion .card-header h2 .btn-link,
-[data-theme='light'] #planSettingsAccordion .card-header h2 .btn-link span,
-#planSettingsAccordion .card-header h2,
-#planSettingsAccordion .card-header .btn-link,
-#planSettingsAccordion .card-header .btn-link span,
-#planSettingsAccordion .card-header h2 .btn-link,
-#planSettingsAccordion .card-header h2 .btn-link span {
-    color: #333 !important;
+.plan-settings-container input[type="text"]:focus,
+.plan-settings-container input[type="number"]:focus,
+.plan-settings-container .form-control:focus,
+.plan-settings-container .glass-form-control:focus {
+    color: #000 !important;
+}
+
+/* Override any inherited text color */
+.plan-settings-container * {
+    color: inherit;
+}
+
+.plan-settings-container input {
+    color: #000 !important;
+}
+
+.glass-label {
+    color: #000 !important;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.modern-btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border: none !important;
+    border-radius: 12px !important;
+    padding: 0.75rem 2rem !important;
     font-weight: 600 !important;
+    color: white !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
 }
 
-/* Force all text in card headers to be black */
-[data-theme='light'] #planSettingsAccordion .card-header *,
-#planSettingsAccordion .card-header * {
+.modern-btn-primary:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 6px 25px rgba(102, 126, 234, 0.5) !important;
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%) !important;
+    color: white !important;
+}
+
+.modern-btn-danger {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%) !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 0.5rem 0.75rem !important;
+    color: white !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 2px 10px rgba(255, 107, 107, 0.3) !important;
+}
+
+.modern-btn-danger:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4) !important;
+    color: white !important;
+}
+
+.subcategory-list {
+    background: rgba(102, 126, 234, 0.05);
+    border-radius: 15px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.subcategory-item {
+    background: rgba(255, 255, 255, 0.8) !important;
+    border: 1px solid rgba(102, 126, 234, 0.2) !important;
+    border-radius: 10px !important;
+    margin-bottom: 0.5rem;
+    padding: 0.75rem 1rem !important;
     color: #333 !important;
+    transition: all 0.3s ease;
 }
 
-/* Override any button text color */
-[data-theme='light'] #planSettingsAccordion .card-header button,
-[data-theme='light'] #planSettingsAccordion .card-header button *,
-#planSettingsAccordion .card-header button,
-#planSettingsAccordion .card-header button * {
-    color: #333 !important;
+.subcategory-item:hover {
+    background: rgba(255, 255, 255, 0.95) !important;
+    transform: translateX(5px);
+    box-shadow: 0 3px 15px rgba(102, 126, 234, 0.1);
 }
 
-/* Fix Add button to span full width */
-.input-group .btn {
-    width: auto !important;
+.ratio-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
 }
 
-.input-group {
-    width: 100% !important;
+.ratio-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 15px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
 }
 
-.input-group .form-control {
-    flex: 1 !important;
+.ratio-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
-.input-group .btn {
-    flex-shrink: 0 !important;
-    min-width: 80px !important;
+.ratio-card .glass-label {
+    color: #000 !important;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.input-group-modern {
+    display: flex;
+    gap: 1rem;
+    align-items: stretch;
+    margin-top: 1rem;
+}
+
+.input-group-modern .form-control {
+    flex: 1;
+    border-radius: 8px;
+    border: 2px solid rgba(102, 126, 234, 0.3);
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.9);
+    transition: all 0.3s ease;
+    color: #000 !important;
+    font-size: 0.95rem;
+}
+
+.input-group-modern .form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+    background: white;
+    outline: none;
+    box-shadow: none !important;
+}
+
+.input-group-modern .btn {
+    flex-shrink: 0;
+    min-width: 80px;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    border: none;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.input-group-modern .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.category-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    font-size: 1.2rem;
+}
+
+.needs-icon {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+}
+
+.wants-icon {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    color: white;
+}
+
+.savings-icon {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    color: white;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+    font-style: italic;
+}
+
+/* Force black text and icons on light backgrounds */
+.settings-card-body {
+    color: #000 !important;
+}
+
+.settings-card-body * {
+    color: #000 !important;
+}
+
+.settings-card-body .btn-link {
+    color: #000 !important;
+}
+
+.settings-card-body .btn-link i {
+    color: #000 !important;
+}
+
+/* Make dropdown arrows black on light backgrounds */
+.settings-card-body .btn-link .bx-chevron-down,
+.settings-card-body .btn-link .bxs-chevron-down {
+    color: #000 !important;
+}
+
+/* Subcategory section text */
+.subcategory-item,
+.subcategory-item * {
+    color: #000 !important;
+}
+
+.empty-state {
+    color: #666 !important;
+}
+
+/* Category names in subcategory headers */
+.settings-card-body .settings-card-header .btn-link {
+    color: #000 !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    text-align: left;
+}
+
+.category-name {
+    color: #000 !important;
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-left: 0.75rem;
+    flex-grow: 1;
+}
+
+.settings-card-body .btn-link .category-icon {
+    flex-shrink: 0;
+}
+
+.settings-card-body .btn-link .bxs-chevron-down {
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .plan-settings-container {
+        padding: 1rem;
+    }
+    
+    .ratio-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .settings-card-body {
+        padding: 1.5rem;
+    }
 }
 </style>
 
-<h1 class="h3 my-4 text-gray-800">Plan Settings</h1>
+<div class="plan-settings-container">
+  <div class="container">
+    <h1 class="plan-settings-title">
+      <i class="bx bx-cog"></i> Plan Settings
+    </h1>
 
-<div class="accordion" id="planSettingsAccordion">
+    <div class="accordion" id="planSettingsAccordion">
 
-  <!-- Plan Name Section -->
-  <div class="card">
-    <div class="card-header" id="headingPlanName">
-      <h2 class="mb-0">
-        <button class="btn btn-link btn-block text-left collapsed d-flex justify-content-between align-items-center" type="button" data-toggle="collapse" data-target="#collapsePlanName" aria-expanded="false" aria-controls="collapsePlanName">
-          <span>Plan Name</span>
-          <i class='bx bxs-chevron-down'></i>
-        </button>
-      </h2>
-    </div>
-    <div id="collapsePlanName" class="collapse" aria-labelledby="headingPlanName" data-parent="#planSettingsAccordion">
-      <div class="card-body">
-        <form method="POST">
-          <div class="form-group">
-            <label for="plan_name">Plan Name</label>
-            <input type="text" id="plan_name" name="plan_name" class="form-control" placeholder="Enter new plan name" value="{{ plan.name }}">
-          </div>
-          <button type="submit" name="update_plan_name" value="true" class="btn btn-primary">Save</button>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- Category Ratio Section -->
-  <div class="card">
-    <div class="card-header" id="headingCategoryRatio">
-      <h2 class="mb-0">
-        <button class="btn btn-link btn-block text-left collapsed d-flex justify-content-between align-items-center" type="button" data-toggle="collapse" data-target="#collapseCategoryRatio" aria-expanded="false" aria-controls="collapseCategoryRatio">
-          <span>Category Ratios</span>
-          <i class='bx bxs-chevron-down'></i>
-        </button>
-      </h2>
-    </div>
-    <div id="collapseCategoryRatio" class="collapse" aria-labelledby="headingCategoryRatio" data-parent="#planSettingsAccordion">
-      <div class="card-body">
-        <form method="POST">
-          <div class="form-row">
-            <div class="form-group col-md-4">
-              <label for="needs_ratio">Needs (%)</label>
-              <input type="number" id="needs_ratio" name="needs_ratio" class="form-control" 
-                     min="0" max="100" step="1" required
-                     value="{{ plan.budget_pref.get('ratios', {}).get('needs', 50) }}">
-            </div>
-            <div class="form-group col-md-4">
-              <label for="wants_ratio">Wants (%)</label>
-              <input type="number" id="wants_ratio" name="wants_ratio" class="form-control" 
-                     min="0" max="100" step="1" required
-                     value="{{ plan.budget_pref.get('ratios', {}).get('wants', 30) }}">
-            </div>
-            <div class="form-group col-md-4">
-              <label for="savings_ratio">Investments (%)</label>
-              <input type="number" id="savings_ratio" name="savings_ratio" class="form-control" 
-                     min="0" max="100" step="1" required
-                     value="{{ plan.budget_pref.get('ratios', {}).get('savings', 20) }}">
-            </div>
-          </div>
-          <button type="submit" name="update_ratios" value="true" class="btn btn-primary">Save Ratios</button>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- Subcategories Section -->
-  <div class="card">
-    <div class="card-header" id="headingSubcategories">
-      <h2 class="mb-0">
-        <button class="btn btn-link btn-block text-left collapsed d-flex justify-content-between align-items-center" type="button" data-toggle="collapse" data-target="#collapseSubcategories" aria-expanded="false" aria-controls="collapseSubcategories">
-          <span>Sub-Categories</span>
-          <i class='bx bxs-chevron-down'></i>
-        </button>
-      </h2>
-    </div>
-    <div id="collapseSubcategories" class="collapse" aria-labelledby="headingSubcategories" data-parent="#planSettingsAccordion">
-      <div class="card-body">
-        <div class="accordion" id="categoryAccordion">
-          {% set categories = {'needs': 'Needs', 'wants': 'Wants', 'savings': 'Investments'} %}
-          {% for cat_key, cat_name in categories.items() %}
-          <div class="card">
-            <div class="card-header" id="heading-{{ cat_key }}">
-              <h2 class="mb-0">
-                <button class="btn btn-link btn-block text-left d-flex justify-content-between align-items-center" type="button" data-toggle="collapse" data-target="#collapse-{{ cat_key }}" aria-expanded="false" aria-controls="collapse-{{ cat_key }}">
-                  {{ cat_name }}
-                  <i class='bx bxs-chevron-down'></i>
-                </button>
-              </h2>
-            </div>
-            <div id="collapse-{{ cat_key }}" class="collapse" aria-labelledby="heading-{{ cat_key }}" data-parent="#categoryAccordion">
-              <div class="card-body">
-                <ul class="list-group mb-3">
-                  {% for subcat in plan.budget_pref.get('subcategories', {}).get(cat_key, []) %}
-                  <li class="list-group-item d-flex justify-content-between align-items-center subcategory-item">
-                    {{ subcat }}
-                    <form method="POST" class="delete-form">
-                      <input type="hidden" name="category" value="{{ cat_key }}">
-                      <input type="hidden" name="subcategory_name" value="{{ subcat }}">
-                      <button type="submit" name="delete_subcategory" value="true" class="btn btn-danger btn-sm delete-btn">
-                        <i class='bx bx-trash'></i>
-                      </button>
-                    </form>
-                  </li>
-                  {% else %}
-                  <li class="list-group-item text-muted">No subcategories yet.</li>
-                  {% endfor %}
-                </ul>
-                <form method="POST">
-                  <div class="input-group">
-                    <input type="hidden" name="category" value="{{ cat_key }}">
-                    <input type="text" name="subcategory_name" class="form-control" placeholder="New {{ cat_name }} subcategory">
-                    <div class="input-group-append">
-                      <button type="submit" name="add_subcategory" value="true" class="btn btn-primary">Add</button>
-                    </div>
-                  </div>
-                </form>
+      <!-- Plan Name Section -->
+      <div class="settings-card">
+        <div class="settings-card-header" id="headingPlanName">
+          <h2 class="mb-0">
+            <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapsePlanName" aria-expanded="false" aria-controls="collapsePlanName">
+              <i class="bx bx-edit-alt"></i> Plan Name
+              <i class='bx bxs-chevron-down'></i>
+            </button>
+          </h2>
+        </div>
+        <div id="collapsePlanName" class="collapse" aria-labelledby="headingPlanName" data-parent="#planSettingsAccordion">
+          <div class="settings-card-body">
+            <form method="POST">
+              <div class="form-group">
+                <label for="plan_name" class="glass-label">Plan Name</label>
+                <input type="text" id="plan_name" name="plan_name" class="form-control glass-form-control" placeholder="Enter new plan name" value="{{ plan.name }}">
               </div>
+              <button type="submit" name="update_plan_name" value="true" class="modern-btn-primary">Save Changes</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category Ratio Section -->
+      <div class="settings-card">
+        <div class="settings-card-header" id="headingCategoryRatio">
+          <h2 class="mb-0">
+            <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseCategoryRatio" aria-expanded="false" aria-controls="collapseCategoryRatio">
+              <i class="bx bx-pie-chart-alt-2"></i> Category Ratios
+              <i class='bx bxs-chevron-down'></i>
+            </button>
+          </h2>
+        </div>
+        <div id="collapseCategoryRatio" class="collapse" aria-labelledby="headingCategoryRatio" data-parent="#planSettingsAccordion">
+          <div class="settings-card-body">
+            <form method="POST">
+              <div class="ratio-grid">
+                <div class="ratio-card">
+                  <div class="category-icon needs-icon">
+                    <i class="bx bx-home-heart"></i>
+                  </div>
+                  <label for="needs_ratio" class="glass-label">Needs (%)</label>
+                  <input type="number" id="needs_ratio" name="needs_ratio" class="form-control glass-form-control" 
+                         min="0" max="100" step="1" required
+                         value="{{ plan.budget_pref.get('ratios', {}).get('needs', 50) }}">
+                </div>
+                <div class="ratio-card">
+                  <div class="category-icon wants-icon">
+                    <i class="bx bx-shopping-bag"></i>
+                  </div>
+                  <label for="wants_ratio" class="glass-label">Wants (%)</label>
+                  <input type="number" id="wants_ratio" name="wants_ratio" class="form-control glass-form-control" 
+                         min="0" max="100" step="1" required
+                         value="{{ plan.budget_pref.get('ratios', {}).get('wants', 30) }}">
+                </div>
+                <div class="ratio-card">
+                  <div class="category-icon savings-icon">
+                    <i class="bx bx-trending-up"></i>
+                  </div>
+                  <label for="savings_ratio" class="glass-label">Investments (%)</label>
+                  <input type="number" id="savings_ratio" name="savings_ratio" class="form-control glass-form-control" 
+                         min="0" max="100" step="1" required
+                         value="{{ plan.budget_pref.get('ratios', {}).get('savings', 20) }}">
+                </div>
+              </div>
+              <div class="text-center">
+                <button type="submit" name="update_ratios" value="true" class="modern-btn-primary">
+                  <i class="bx bx-check"></i> Save Ratios
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Subcategories Section -->
+      <div class="settings-card">
+        <div class="settings-card-header" id="headingSubcategories">
+          <h2 class="mb-0">
+            <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseSubcategories" aria-expanded="false" aria-controls="collapseSubcategories">
+              <i class="bx bx-category"></i> Sub-Categories
+              <i class='bx bxs-chevron-down'></i>
+            </button>
+          </h2>
+        </div>
+        <div id="collapseSubcategories" class="collapse" aria-labelledby="headingSubcategories" data-parent="#planSettingsAccordion">
+          <div class="settings-card-body">
+            <div class="accordion" id="categoryAccordion">
+              {% set categories = {'needs': 'Needs', 'wants': 'Wants', 'savings': 'Investments'} %}
+              {% set category_icons = {'needs': 'bx-home-heart', 'wants': 'bx-shopping-bag', 'savings': 'bx-trending-up'} %}
+              {% set category_colors = {'needs': 'needs-icon', 'wants': 'wants-icon', 'savings': 'savings-icon'} %}
+              {% for cat_key, cat_name in categories.items() %}
+              <div class="settings-card mb-3">
+                <div class="settings-card-header" id="heading-{{ cat_key }}">
+                  <h2 class="mb-0">
+                    <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse-{{ cat_key }}" aria-expanded="false" aria-controls="collapse-{{ cat_key }}">
+                      <div class="category-icon {{ category_colors[cat_key] }}">
+                        <i class="bx {{ category_icons[cat_key] }}"></i>
+                      </div>
+                      <span class="category-name">{{ cat_name }}</span>
+                      <i class='bx bxs-chevron-down'></i>
+                    </button>
+                  </h2>
+                </div>
+                <div id="collapse-{{ cat_key }}" class="collapse" aria-labelledby="heading-{{ cat_key }}" data-parent="#categoryAccordion">
+                  <div class="settings-card-body">
+                    <div class="subcategory-list">
+                      {% for subcat in plan.budget_pref.get('subcategories', {}).get(cat_key, []) %}
+                      <div class="subcategory-item d-flex justify-content-between align-items-center">
+                        <span><i class="bx bx-tag"></i> {{ subcat }}</span>
+                        <form method="POST" class="delete-form">
+                          <input type="hidden" name="category" value="{{ cat_key }}">
+                          <input type="hidden" name="subcategory_name" value="{{ subcat }}">
+                          <button type="submit" name="delete_subcategory" value="true" class="modern-btn-danger btn-sm">
+                            <i class='bx bx-trash'></i>
+                          </button>
+                        </form>
+                      </div>
+                      {% else %}
+                      <div class="empty-state">
+                        <i class="bx bx-folder-open" style="font-size: 2rem; opacity: 0.5;"></i>
+                        <p>No subcategories yet. Add your first one below!</p>
+                      </div>
+                      {% endfor %}
+                    </div>
+                    <form method="POST">
+                      <div class="input-group-modern">
+                        <input type="hidden" name="category" value="{{ cat_key }}">
+                        <input type="text" name="subcategory_name" class="form-control" placeholder="New {{ cat_name }} subcategory">
+                        <button type="submit" name="add_subcategory" value="true" class="btn">
+                          <i class="bx bx-plus"></i> Add
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
             </div>
           </div>
-        {% endfor %}
+        </div>
       </div>
     </div>
   </div>

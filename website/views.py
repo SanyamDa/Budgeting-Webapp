@@ -449,8 +449,7 @@ def add_transaction():
             'success': True,
             'transaction_id': transaction.id,
             'category_spent': category.spent_amount,
-            'category_available': category.available_amount,
-            'flash': flash_msg
+            'category_available': category.available_amount
         })
         
     except Exception as e:
@@ -490,6 +489,85 @@ def create_category():
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@views.route('/api/transactions', methods=['GET'])
+@login_required
+def get_transactions():
+    """API endpoint to get all transactions for the current user"""
+    try:
+        transactions = db.session.query(
+            Transaction.id,
+            Transaction.description,
+            Transaction.amount,
+            Transaction.created_date,
+            BudgetCategory.name.label('category_name'),
+            Payee.name.label('payee_name')
+        ).join(
+            BudgetCategory, Transaction.category_id == BudgetCategory.id
+        ).outerjoin(
+            Payee, Transaction.payee_id == Payee.id
+        ).filter(
+            Transaction.plan_id == current_user.active_plan.id
+        ).order_by(Transaction.created_date.desc()).all()
+        
+        transaction_list = []
+        for t in transactions:
+            transaction_list.append({
+                'id': t.id,
+                'description': t.description,
+                'amount': t.amount,
+                'created_at': t.created_date.isoformat(),
+                'category_name': t.category_name,
+                'payee_name': t.payee_name
+            })
+        
+        return jsonify({
+            'success': True,
+            'transactions': transaction_list
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@views.route('/api/transactions/<int:transaction_id>', methods=['DELETE'])
+@login_required
+def delete_transaction(transaction_id):
+    """API endpoint to delete a transaction"""
+    try:
+        transaction = Transaction.query.filter_by(
+            id=transaction_id,
+            plan_id=current_user.active_plan.id
+        ).first()
+        
+        if not transaction:
+            return jsonify({'success': False, 'error': 'Transaction not found'}), 404
+        
+        category_id = transaction.category_id
+        
+        # Delete the transaction
+        db.session.delete(transaction)
+        db.session.commit()
+        
+        # Update category spent amount
+        category = BudgetCategory.query.get(category_id)
+        if category:
+            spent = db.session.query(func.sum(Transaction.amount)).filter_by(
+                category_id=category.id
+            ).scalar() or 0
+            category.spent_amount = abs(spent)
+            db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Transaction deleted successfully'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
 @views.route('/open-plan')
 @login_required
@@ -624,6 +702,173 @@ def transactions():
         ).order_by(Transaction.transaction_date.desc()).all(),
         payees=[{'id': p.id, 'name': p.name} for p in plan.payees]
     )
+
+
+# --------------------------- Reflect Page ---------------------------
+@views.route('/reflect')
+@login_required
+def reflect():
+    plan = current_user.active_plan
+    if not plan:
+        flash("No active plan found.", 'error')
+        return redirect(url_for('views.home'))
+    
+    transactions = db.session.query(Transaction).filter(
+        Transaction.plan_id == plan.id
+    ).order_by(Transaction.transaction_date.desc()).all()
+    
+    # Get unique months with data
+    months_with_data = set()
+    for tx in transactions:
+        month_key = tx.transaction_date.strftime('%Y-%m')
+        months_with_data.add(month_key)
+    
+    sorted_months = sorted(list(months_with_data), reverse=True)
+    month_options = []
+    for month_key in sorted_months:
+        year, month = month_key.split('-')
+        month_name = datetime.datetime(int(year), int(month), 1).strftime('%b %Y')
+        month_options.append({'value': month_key, 'display': month_name})
+    
+    current_month = sorted_months[0] if sorted_months else None
+    
+    # Calculate spending data and real statistics
+    spending_data = []
+    grouped_spending = {'needs': [], 'wants': [], 'investments': []}
+    total_spending = 0
+    summary_stats = {
+        'avg_monthly': 0,
+        'avg_daily': 0,
+        'most_frequent_category': 'None',
+        'largest_transaction': 0
+    }
+    
+    if current_month:
+        year, month = current_month.split('-')
+        start_of_month = datetime.datetime(int(year), int(month), 1)
+        if int(month) == 12:
+            end_of_month = datetime.datetime(int(year) + 1, 1, 1)
+        else:
+            end_of_month = datetime.datetime(int(year), int(month) + 1, 1)
+        
+        month_transactions = db.session.query(Transaction).filter(
+            Transaction.plan_id == plan.id,
+            Transaction.transaction_date >= start_of_month,
+            Transaction.transaction_date < end_of_month
+        ).all()
+        
+        category_totals = {}
+        main_category_totals = {'needs': 0, 'wants': 0, 'investments': 0}
+        
+        for tx in month_transactions:
+            category_name = tx.category.name
+            main_cat = tx.category.main_category
+            amount = abs(tx.amount)
+            
+            if category_name not in category_totals:
+                category_totals[category_name] = {
+                    'amount': 0, 
+                    'main_category': main_cat
+                }
+            category_totals[category_name]['amount'] += amount
+            main_category_totals[main_cat] += amount
+            total_spending += amount
+        
+        spending_data = [{
+            'category': cat, 
+            'amount': data['amount']
+        } for cat, data in category_totals.items()]
+        
+        # Colors for subcategories
+        colors = [
+            '#6f42c1', '#20c997', '#fd7e14', '#e83e8c', '#6610f2',
+            '#6f9bd1', '#28a745', '#ffc107', '#dc3545', '#17a2b8',
+            '#f8f9fa', '#6c757d', '#343a40', '#007bff', '#6f42c1'
+        ]
+        
+        # Group spending by main category
+        color_index = 0
+        for cat, data in category_totals.items():
+            main_cat = data['main_category']
+            percentage = (data['amount'] / total_spending * 100) if total_spending > 0 else 0
+            
+            grouped_spending[main_cat].append({
+                'name': cat,
+                'amount': data['amount'],
+                'percentage': round(percentage, 1),
+                'color': colors[color_index % len(colors)]
+            })
+            color_index += 1
+        
+        # Calculate real summary statistics
+        months_used = len(sorted_months)
+        summary_stats['avg_monthly'] = total_spending / months_used if months_used > 0 else 0
+        summary_stats['avg_daily'] = summary_stats['avg_monthly'] / 30
+        
+        # Most frequent category (by spending amount)
+        if main_category_totals:
+            most_frequent = max(main_category_totals, key=main_category_totals.get)
+            summary_stats['most_frequent_category'] = most_frequent.title()
+        
+        # Largest transaction
+        all_transactions = db.session.query(Transaction).filter(
+            Transaction.plan_id == plan.id
+        ).all()
+        if all_transactions:
+            summary_stats['largest_transaction'] = max(abs(tx.amount) for tx in all_transactions)
+    
+    return render_template('reflect.html', 
+                         month_options=month_options,
+                         current_month=current_month,
+                         spending_data=spending_data,
+                         grouped_spending=grouped_spending,
+                         total_spending=total_spending,
+                         summary_stats=summary_stats)
+
+
+@views.route('/add_category', methods=['POST'])
+@login_required
+def add_category():
+    """Add a new category to the current plan."""
+    plan = current_user.active_plan
+    if not plan:
+        flash("No active plan found.", 'error')
+        return redirect(url_for('views.home'))
+    
+    main_category = request.form.get('main_category')
+    category_name = request.form.get('category_name')
+    
+    if not main_category or not category_name:
+        flash("Please fill in all fields.", 'error')
+        return redirect(url_for('views.home'))
+    
+    # Check if category already exists
+    existing_category = BudgetCategory.query.filter_by(
+        name=category_name,
+        plan_id=plan.id
+    ).first()
+    
+    if existing_category:
+        flash(f"Category '{category_name}' already exists.", 'error')
+        return redirect(url_for('views.home'))
+    
+    # Create new category
+    new_category = BudgetCategory(
+        name=category_name,
+        main_category=main_category,
+        plan_id=plan.id
+    )
+    
+    try:
+        db.session.add(new_category)
+        db.session.commit()
+        flash(f"Category '{category_name}' added successfully!", 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash("Error adding category. Please try again.", 'error')
+    
+    return redirect(url_for('views.home'))
+
 
 @views.route('/switch-plan/<int:plan_id>')
 @login_required

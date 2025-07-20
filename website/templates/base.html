@@ -73,6 +73,11 @@
                     <i class='bx bx-receipt'></i> <span class="sidebar-text">Transactions</span>
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.path == url_for('views.reflect') %}active{% endif %}" href="{{ url_for('views.reflect') }}">
+                    <i class='bx bx-bar-chart-alt-2'></i> <span class="sidebar-text">Reflect</span>
+                </a>
+            </li>
 
         </ul>
 

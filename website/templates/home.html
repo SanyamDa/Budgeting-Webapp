@@ -30,8 +30,15 @@
 
     <!-- Budget Table and Summary Panel -->
     <div class="main-content-grid">
-        <div class="budget-table-container">
-            <table class="budget-table">
+        <div class="budget-section">
+            <!-- Add Category Button -->
+            <div class="d-flex justify-content-start mb-3">
+                <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addCategoryModal">
+                    <i class="bx bx-plus"></i> Add Category
+                </button>
+            </div>
+            <div class="budget-table-container">
+                <table class="budget-table">
                 <thead>
                     <tr>
                         <th class="col-category">CATEGORY</th>
@@ -70,6 +77,7 @@
                     {%- endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
 
         <div class="right-panel">
@@ -137,6 +145,41 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
                 <button type="submit" form="editAmountForm" class="btn btn-primary" id="saveAmountBtn">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Category Modal -->
+<div class="modal fade" id="addCategoryModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" style="color: #000000 !important; font-weight: bold;">Add New Category</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addCategoryForm" action="{{ url_for('views.add_category') }}" method="POST">
+                    <div class="form-group">
+                        <label for="mainCategory" style="font-weight: 500; color: #495057;">Main Category</label>
+                        <select class="form-control" id="mainCategory" name="main_category" required>
+                            <option value="">Select Main Category</option>
+                            <option value="needs">Needs</option>
+                            <option value="wants">Wants</option>
+                            <option value="investments">Investments</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="categoryName" style="font-weight: 500; color: #495057;">Category Name</label>
+                        <input type="text" class="form-control" id="categoryName" name="category_name" placeholder="Enter category name" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="submit" form="addCategoryForm" class="btn btn-primary">Add Category</button>
             </div>
         </div>
     </div>

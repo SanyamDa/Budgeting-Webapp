@@ -405,6 +405,7 @@ body.auth{                    /* optional shared tweaks */
 #content-wrapper {
   transition: margin-left 0.3s ease-in-out;
   flex-grow: 1;
+  min-height: 100vh;
 }
 
 .sidebar-footer {

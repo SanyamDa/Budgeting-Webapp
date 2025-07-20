@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+
+{% block title %}Reflect{% endblock %}
+
+{% block content %}
+<div class="container-fluid pb-3 mt-4" style="min-height: 100vh;">
+
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs mb-4" id="reflectTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <a class="nav-link active" id="spending-breakdown-tab" data-toggle="tab" href="#spending-breakdown" role="tab" aria-controls="spending-breakdown" aria-selected="true">
+                <i class="bx bx-pie-chart-alt-2"></i> Spending Breakdown
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" id="spending-trends-tab" data-toggle="tab" href="#spending-trends" role="tab" aria-controls="spending-trends" aria-selected="false">
+                <i class="bx bx-trending-up"></i> Spending Trends
+            </a>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="reflectTabContent">
+        <!-- Spending Breakdown Tab -->
+        <div class="tab-pane fade show active" id="spending-breakdown" role="tabpanel" aria-labelledby="spending-breakdown-tab">
+            <div class="row">
+                <!-- Left Column - Main Content -->
+                <div class="col-lg-7">
+                    <!-- Month and Category Selection -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="mb-0">Spending Breakdown</h4>
+                        <div class="d-flex mb-4" style="gap: 2rem;">
+                            <select class="form-select glass-select" id="monthSelector">
+                                {% for month in month_options %}
+                                <option value="{{ month.value }}" {% if month.value == current_month %}selected{% endif %}>{{ month.display }}</option>
+                                {% endfor %}
+                            </select>
+                            <select class="form-select glass-select" id="categorySelector">
+                                <option value="all">All Categories</option>
+                                <option value="needs">Needs</option>
+                                <option value="wants">Wants</option>
+                                <option value="investments">Investments</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Pie Chart Container -->
+                    <div class="card glass p-4">
+                        <div class="d-flex justify-content-center">
+                            {% if spending_data %}
+                            <canvas id="spendingPieChart" width="400" height="400"></canvas>
+                            {% else %}
+                            <div class="text-center py-5">
+                                <h5 class="text-muted">No spending data available</h5>
+                                <p class="text-muted">Add some transactions to see your spending breakdown</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Summary Statistics Card -->
+                    <div class="card glass p-2 mt-4">
+                        <div class="row g-2">
+                            <div class="col-md-6 mb-3">
+                                <div class="text-center">
+                                    <h5 class="text-primary mb-1">${{ "%.2f"|format(summary_stats.avg_monthly) }}</h5>
+                                    <small class="text-muted">Average Monthly Spending</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="text-center">
+                                    <h5 class="text-info mb-1">${{ "%.2f"|format(summary_stats.avg_daily) }}</h5>
+                                    <small class="text-muted">Average Daily Spending</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="text-center">
+                                    <h5 class="text-success mb-1">{{ summary_stats.most_frequent_category }}</h5>
+                                    <small class="text-muted">Most Frequent Category</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="text-center">
+                                    <h5 class="text-warning mb-1">${{ "%.2f"|format(summary_stats.largest_transaction) }}</h5>
+                                    <small class="text-muted">Largest Transaction</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right Column - Category Breakdown -->
+                <div class="col-lg-5">
+                    <div class="card glass p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0 header-sm">Categories</h5>
+                            <h5 class="mb-0 text-muted header-sm">Total Spending</h5>
+                        </div>
+                        <hr class="border-light mx-n4 mt-2 mb-3">
+                        
+                        <!-- Needs Section -->
+                        <div class="mb-4 needs-section category-section">
+                            <h6 class="text-success mb-2"><i class="bx bx-heart"></i> Needs</h6>
+                            {% if grouped_spending.needs %}
+                                {% for item in grouped_spending.needs %}
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="text-white">{{ item.name }}</span>
+                                        <span class="text-white font-weight-bold">${{ "%.2f"|format(item.amount) }}</span>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar" role="progressbar" style="width: {{ item.percentage }}%; background-color: {{ item.color }};" aria-valuenow="{{ item.percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <small class="text-muted">{{ item.percentage }}%</small>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-muted small">None</p>
+                            {% endif %}
+                        </div>
+                        <hr class="border-light mx-n4">
+                        
+                        <!-- Wants Section -->
+                        <div class="mb-4 wants-section category-section">
+                            <h6 class="text-info mb-2"><i class="bx bx-smile"></i> Wants</h6>
+                            {% if grouped_spending.wants %}
+                                {% for item in grouped_spending.wants %}
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="text-white">{{ item.name }}</span>
+                                        <span class="text-white font-weight-bold">${{ "%.2f"|format(item.amount) }}</span>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar" role="progressbar" style="width: {{ item.percentage }}%; background-color: {{ item.color }};" aria-valuenow="{{ item.percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <small class="text-muted">{{ item.percentage }}%</small>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-muted small">None</p>
+                            {% endif %}
+                        </div>
+                        <hr class="border-light mx-n4">
+                        
+                        <!-- Investments Section -->
+                        <div class="mb-4 investments-section category-section">
+                            <h6 class="text-warning mb-2"><i class="bx bx-trending-up"></i> Investments</h6>
+                            {% if grouped_spending.investments %}
+                                {% for item in grouped_spending.investments %}
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="text-white">{{ item.name }}</span>
+                                        <span class="text-white font-weight-bold">${{ "%.2f"|format(item.amount) }}</span>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar" role="progressbar" style="width: {{ item.percentage }}%; background-color: {{ item.color }};" aria-valuenow="{{ item.percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <small class="text-muted">{{ item.percentage }}%</small>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-muted small">None</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Spending Trends Tab -->
+        <div class="tab-pane fade" id="spending-trends" role="tabpanel" aria-labelledby="spending-trends-tab">
+            <div class="text-center py-5">
+                <h4 class="text-muted">Spending Trends</h4>
+                <p class="text-muted">Coming soon...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get data from backend
+    const allSpendingData = {{ spending_data | tojson }};
+    const groupedSpending = {{ grouped_spending | tojson }};
+    
+    // Initialize pie chart
+    const ctx = document.getElementById('spendingPieChart').getContext('2d');
+    
+    // Generate colors for each category
+    const colors = [
+        '#6f42c1', '#20c997', '#fd7e14', '#e83e8c', '#6610f2',
+        '#6f9bd1', '#28a745', '#ffc107', '#dc3545', '#17a2b8'
+    ];
+    
+    let spendingChart;
+    
+    function initializeChart(data) {
+        const labels = data.map(item => item.category);
+        const amounts = data.map(item => item.amount);
+        
+        if (spendingChart) {
+            spendingChart.destroy();
+        }
+        
+        spendingChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels.length > 0 ? labels : ['No data'],
+                datasets: [{
+                    data: amounts.length > 0 ? amounts : [1],
+                    backgroundColor: amounts.length > 0 ? colors.slice(0, amounts.length) : ['#6c757d'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#fff',
+                            padding: 20
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    function updateRightPanel(categoryFilter) {
+        const needsSection = document.querySelector('.needs-section');
+        const wantsSection = document.querySelector('.wants-section');
+        const investmentsSection = document.querySelector('.investments-section');
+        
+        // Remove all existing classes first
+        [needsSection, wantsSection, investmentsSection].forEach(section => {
+            if (section) {
+                section.classList.remove('blurred', 'focused');
+            }
+        });
+        
+        if (categoryFilter === 'all') {
+            // All sections normal - no special effects
+            return;
+        }
+        
+        // Apply blur effect to unselected sections and focus to selected
+        const sections = {
+            'needs': needsSection,
+            'wants': wantsSection,
+            'investments': investmentsSection
+        };
+        
+        Object.keys(sections).forEach(key => {
+            const section = sections[key];
+            if (section) {
+                if (key === categoryFilter) {
+                    section.classList.add('focused');
+                } else {
+                    section.classList.add('blurred');
+                }
+            }
+        });
+    }
+    
+    function filterDataByCategory(categoryFilter) {
+        if (categoryFilter === 'all') {
+            return allSpendingData;
+        }
+        
+        const filteredData = [];
+        if (groupedSpending[categoryFilter]) {
+            groupedSpending[categoryFilter].forEach(item => {
+                filteredData.push({
+                    category: item.name,
+                    amount: item.amount
+                });
+            });
+        }
+        return filteredData;
+    }
+    
+    // Event listeners for dropdowns
+    const categorySelector = document.getElementById('categorySelector');
+    const monthSelector = document.getElementById('monthSelector');
+    
+    categorySelector.addEventListener('change', function() {
+        const selectedCategory = this.value;
+        const filteredData = filterDataByCategory(selectedCategory);
+        initializeChart(filteredData);
+        updateRightPanel(selectedCategory);
+    });
+    
+    monthSelector.addEventListener('change', function() {
+        // Reload page with new month selection
+        const selectedMonth = this.value;
+        window.location.href = `/reflect?month=${selectedMonth}`;
+    });
+    
+    // Initialize chart with all data
+    initializeChart(allSpendingData);
+});
+</script>
+{% endblock %}

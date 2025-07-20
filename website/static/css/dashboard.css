@@ -35,7 +35,6 @@ body:not(.login-page):not(.signup-page):not(.forgot-page):not(.reset-page):not(.
   min-height: 100vh;
   background-attachment: fixed;
   background-size: cover;
-  animation: gradientShift 8s ease infinite;
 }
 
 /* Add animated gradient effect */
@@ -393,5 +392,63 @@ body.verify-page .card .form-control:-webkit-autofill:focus {
 
 tr.collapse:not(.show) {
   display: none !important;
+}
+
+.header-sm {
+  font-size: 1.05rem;   /* tweak up/down until it feels right */
+  font-weight: 600;     /* keep it bold */
+}
+
+/* Glass-themed select dropdowns for Reflect page */
+.glass-select {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 12px !important;
+  color: #fff !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  padding: 0.75rem 1rem !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease !important;
+  text-align: center !important;
+  background-position: calc(100% - 3rem) center !important;
+  padding-right: 1rem !important;
+}
+
+.glass-select:focus {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(34, 139, 87, 0.6) !important;
+  box-shadow: 0 0 0 3px rgba(34, 139, 87, 0.2) !important;
+  outline: none !important;
+}
+
+.glass-select:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.glass-select option {
+  background: rgba(30, 30, 50, 0.95) !important;
+  color: #fff !important;
+  padding: 0.5rem !important;
+}
+
+/* Creative blur effect for right panel category filtering */
+.category-section {
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.category-section.blurred {
+  filter: blur(3px) grayscale(0.3);
+  opacity: 0.4;
+  transform: scale(0.98);
+  pointer-events: none;
+}
+
+.category-section.focused {
+  filter: none;
+  opacity: 1;
+  transform: scale(1.02);
+  box-shadow: 0 8px 25px rgba(34, 139, 87, 0.15);
 }
 

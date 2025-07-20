@@ -43,6 +43,53 @@ html, body {
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
 }
 
+/* ===== Blur Effect for Reflect Page ===== */
+.category-section {
+  transition: all 0.5s ease-in-out;
+  transform-origin: top;
+}
+
+.category-section.blurred {
+  filter: grayscale(80%) blur(3px);
+  opacity: 0.6;
+  transform: scale(0.98);
+}
+
+.category-section.focused {
+  transform: scale(1.01);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+  z-index: 1;
+}
+
+/* ===== Summary Card Styling ===== */
+.summary-card {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px !important;
+  backdrop-filter: blur(10px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(160%) !important;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.3s ease !important;
+}
+
+.summary-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.summary-stat {
+  padding: 1.25rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  transition: all 0.3s ease;
+}
+
+.summary-stat:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+}
+
 /* ===== Modern input styling ===== */
 .input-group.custom-input {
   border: 2px solid rgba(255, 255, 255, 0.2);
