@@ -1,4 +1,4 @@
-#!/Users/sanyamjain/budgeting-webapp/.venv/bin/python3.13
+#!/Users/sanyamjain/Desktop/GitHub/Budgeting-Webapp/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys

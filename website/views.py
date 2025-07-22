@@ -1,8 +1,9 @@
 from dateutil.relativedelta import relativedelta
 from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for
 from flask_login import login_required, current_user
-from .models import Note, User, Plan, BudgetCategory, Transaction, Payee, MonthlyBudget, MonthlyRollover
+from .models import Note, User, Plan, BudgetCategory, Transaction, Payee, MonthlyBudget, BankAccount, MonthlyRollover
 from . import db
+from .kbank_api import KBankAPI, sync_kbank_account
 import json
 from datetime import datetime, timedelta
 from sqlalchemy import func, extract, desc
@@ -1834,3 +1835,357 @@ def update_budget_form():
     
     flash(f'Successfully assigned ${new_amount:.2f} to {category_to_update.name}.', 'success')
     return redirect(url_for('views.home'))
+
+
+# ===== BANK ACCOUNT INTEGRATION =====
+
+@views.route('/bank_accounts')
+@login_required
+def bank_accounts():
+    """Bank Account Management page"""
+    plan = current_user.active_plan
+    bank_accounts = BankAccount.query.filter_by(plan_id=plan.id, is_active=True).all()
+    return render_template('bank_accounts.html', bank_accounts=bank_accounts)
+
+
+@views.route('/api/bank_accounts/link', methods=['POST'])
+@login_required
+def link_bank_account():
+    """Link a new bank account"""
+    try:
+        data = request.get_json()
+        bank_name = data.get('bank_name')
+        account_number = data.get('account_number')
+        account_name = data.get('account_name')
+        nickname = data.get('nickname', '')
+        
+        if not all([bank_name, account_number, account_name]):
+            return jsonify({'success': False, 'message': 'All required fields must be filled'})
+        
+        # Validate supported banks
+        supported_banks = ['Kasikorn Bank']
+        if bank_name not in supported_banks:
+            return jsonify({'success': False, 'message': 'Bank not supported'})
+        
+        # Check if account already exists
+        existing_account = BankAccount.query.filter_by(
+            account_number=account_number,
+            plan_id=current_user.active_plan.id
+        ).first()
+        
+        if existing_account:
+            return jsonify({'success': False, 'message': 'This account is already linked'})
+        
+        # Create new bank account
+        new_account = BankAccount(
+            bank_name=bank_name,
+            account_number=account_number,
+            account_name=account_name,
+            nickname=nickname,
+            plan_id=current_user.active_plan.id
+        )
+        
+        db.session.add(new_account)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'{bank_name} account linked successfully!',
+            'account_id': new_account.id
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error linking account: {str(e)}'})
+
+
+@views.route('/api/bank_accounts/<int:account_id>/sync', methods=['POST'])
+@login_required
+def sync_bank_account(account_id):
+    """Sync transactions from Kasikorn Bank account"""
+    try:
+        # Get the bank account
+        bank_account = BankAccount.query.filter_by(
+            id=account_id,
+            plan_id=current_user.active_plan.id
+        ).first()
+        
+        if not bank_account:
+            return jsonify({'success': False, 'message': 'Bank account not found'})
+        
+        # Bank-specific sync logic
+        if bank_account.bank_name == "Kasikorn Bank":
+            result = sync_kbank_account(account_id)
+            return jsonify(result)
+        else:
+            return jsonify({'success': False, 'message': 'Unsupported bank'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error syncing account: {str(e)}'})
+
+
+def parse_transaction_notes_with_ai(user_notes, amount):
+    """Use AI to parse user notes and extract payee and category information"""
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        
+        # Get existing subcategories for context
+        existing_subcategories = get_existing_subcategories_for_ai(current_user.active_plan_id)
+        
+        prompt = f"""
+        Analyze this payment note and extract payee and category information:
+        
+        Payment Note: "{user_notes}"
+        Amount: ฿{amount}
+        
+        EXISTING SUBCATEGORIES in the user's budget:
+        {existing_subcategories}
+        
+        Extract:
+        1. **Payee Name**: The person/business being paid (e.g., "Bike taxi driver", "Som tam vendor", "7-Eleven")
+        2. **Main Category**: Needs, Wants, or Investments
+        3. **Subcategory**: Match existing ones or suggest new specific subcategory
+        
+        Examples:
+        - "Bike taxi - Transportation" → Payee: "Bike Taxi", Category: "Needs", Subcategory: "Transportation"
+        - "Som tam vendor - Food" → Payee: "Som Tam Vendor", Category: "Wants", Subcategory: "Street Food"
+        - "7-Eleven - Snacks" → Payee: "7-Eleven", Category: "Wants", Subcategory: "Convenience Store"
+        
+        Respond ONLY with JSON:
+        {{
+            "payee": "Extracted payee name",
+            "main_category": "Needs/Wants/Investments",
+            "subcategory": "Specific subcategory",
+            "subcategory_exists": true/false,
+            "confidence": "high/medium/low"
+        }}
+        """
+        
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=200,
+            temperature=0.1
+        )
+        
+        ai_response = response.choices[0].message.content.strip()
+        
+        # Parse JSON response
+        import json
+        import re
+        
+        json_match = re.search(r'\{.*\}', ai_response, re.DOTALL)
+        if json_match:
+            parsed_data = json.loads(json_match.group())
+        else:
+            parsed_data = json.loads(ai_response)
+        
+        return {
+            'payee': parsed_data.get('payee', 'Unknown Payee'),
+            'main_category': parsed_data.get('main_category', 'wants').lower(),
+            'subcategory': parsed_data.get('subcategory', 'General'),
+            'subcategory_exists': parsed_data.get('subcategory_exists', False),
+            'confidence': parsed_data.get('confidence', 'medium')
+        }
+        
+    except Exception as e:
+        print(f"DEBUG: Error parsing notes with AI: {e}")
+        # Fallback to basic parsing
+        return parse_notes_basic(user_notes)
+
+
+def parse_notes_basic(user_notes):
+    """Basic fallback parsing for transaction notes"""
+    # Simple parsing logic
+    parts = user_notes.split(' - ')
+    
+    if len(parts) >= 2:
+        payee = parts[0].strip()
+        purpose = parts[1].strip().lower()
+        
+        # Basic category mapping
+        if any(word in purpose for word in ['food', 'restaurant', 'coffee', 'snack']):
+            return {'payee': payee, 'main_category': 'wants', 'subcategory': 'Dining Out', 'subcategory_exists': False, 'confidence': 'low'}
+        elif any(word in purpose for word in ['transport', 'taxi', 'bus', 'train']):
+            return {'payee': payee, 'main_category': 'needs', 'subcategory': 'Transportation', 'subcategory_exists': False, 'confidence': 'low'}
+        else:
+            return {'payee': payee, 'main_category': 'wants', 'subcategory': 'General', 'subcategory_exists': False, 'confidence': 'low'}
+    
+    return {'payee': user_notes, 'main_category': 'wants', 'subcategory': 'General', 'subcategory_exists': False, 'confidence': 'low'}
+
+
+def create_unassigned_transaction(amount, description, transaction_date, bank_account, bank_reference):
+    """Create an unassigned transaction for manual review"""
+    # Find or create "Unassigned" category
+    unassigned_category = BudgetCategory.query.filter_by(
+        name="Unassigned",
+        main_category="wants",
+        plan_id=bank_account.plan_id
+    ).first()
+    
+    if not unassigned_category:
+        unassigned_category = BudgetCategory(
+            name="Unassigned",
+            main_category="wants",
+            plan_id=bank_account.plan_id,
+            assigned_amount=0.0,
+            spent_amount=0.0
+        )
+        db.session.add(unassigned_category)
+        db.session.flush()
+    
+    # Create transaction
+    new_transaction = Transaction(
+        amount=-amount,
+        description=f"Bank: {description}",
+        transaction_date=transaction_date,
+        category_id=unassigned_category.id,
+        plan_id=bank_account.plan_id,
+        source_type='bank',
+        bank_reference=bank_reference,
+        user_notes="No notes provided - requires manual categorization",
+        bank_account_id=bank_account.id
+    )
+    
+    db.session.add(new_transaction)
+    return new_transaction
+
+# Kasikorn Bank OAuth Routes
+@views.route('/auth/kbank')
+@login_required
+def kbank_auth():
+    """Initiate Kasikorn Bank OAuth authentication via Finverse"""
+    try:
+        api = KBankAPI()
+        
+        # Generate state parameter for security
+        state = f"user_{current_user.id}_plan_{current_user.active_plan.id}"
+        
+        # Get authorization URL
+        auth_url = api.get_authorization_url(state=state)
+        
+        if not auth_url:
+            flash('Kasikorn Bank API not configured. Please check API credentials.', 'error')
+            return redirect(url_for('views.bank_accounts'))
+        
+        # Redirect user to Kasikorn Bank for authentication
+        return redirect(auth_url)
+        
+    except Exception as e:
+        flash(f'Error initiating Kasikorn Bank authentication: {str(e)}', 'error')
+        return redirect(url_for('views.bank_accounts'))
+
+
+@views.route('/auth/kbank/callback')
+def kbank_callback():
+    """Handle Kasikorn Bank OAuth callback"""
+    try:
+        # Check if user is logged in
+        if not current_user.is_authenticated:
+            flash('Please log in to link your bank account.', 'error')
+            return redirect(url_for('auth.login'))
+        
+        # Get authorization code from callback
+        code = request.args.get('code')
+        state = request.args.get('state')
+        error = request.args.get('error')
+        
+        if error:
+            flash(f'Kasikorn Bank authentication failed: {error}', 'error')
+            return redirect(url_for('views.bank_accounts'))
+        
+        if not code:
+            flash('No authorization code received from Kasikorn Bank', 'error')
+            return redirect(url_for('views.bank_accounts'))
+        
+        # In demo mode, skip state verification
+        if code != 'demo_auth_code':
+            # Verify state parameter for real OAuth
+            expected_state = f"user_{current_user.id}_plan_{current_user.active_plan.id}"
+            if state != expected_state:
+                flash('Invalid state parameter. Authentication failed.', 'error')
+                return redirect(url_for('views.bank_accounts'))
+        
+        # Exchange code for access token
+        api = KBankAPI()
+        token_data = api.exchange_code_for_token(code)
+        
+        if not token_data:
+            flash('Failed to obtain access token from Kasikorn Bank', 'error')
+            return redirect(url_for('views.bank_accounts'))
+        
+        # Get user's bank accounts from API
+        accounts_data = api.get_accounts(token_data['access_token'])
+        
+        if not accounts_data:
+            flash('Failed to retrieve account information from Kasikorn Bank', 'error')
+            return redirect(url_for('views.bank_accounts'))
+        
+        # Process and save bank accounts
+        new_accounts = 0
+        for account_data in accounts_data.get('accounts', []):
+            # Check if account already exists
+            existing = BankAccount.query.filter_by(
+                account_number=account_data['account_number'],
+                plan_id=current_user.active_plan.id
+            ).first()
+            
+            if not existing:
+                # Encrypt and store API tokens
+                encrypted_token = api.encrypt_token(token_data)
+                
+                # Create new bank account record
+                bank_account = BankAccount(
+                    bank_name="Kasikorn Bank",
+                    account_number=account_data['account_number'],
+                    account_holder_name=account_data.get('account_name', 'Account Holder'),
+                    nickname=f"BBL {account_data['account_number'][-4:]}",
+                    api_token_encrypted=encrypted_token,
+                    is_active=True,
+                    plan_id=current_user.active_plan.id
+                )
+                
+                db.session.add(bank_account)
+                new_accounts += 1
+        
+        db.session.commit()
+        
+        if new_accounts > 0:
+            flash(f'Successfully linked {new_accounts} Kasikorn Bank account(s)!', 'success')
+        else:
+            flash('Kasikorn Bank accounts already linked', 'info')
+        
+        return redirect(url_for('views.bank_accounts'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error processing Kasikorn Bank authentication: {str(e)}', 'error')
+        return redirect(url_for('views.bank_accounts'))
+
+
+@views.route('/api/bank_accounts/<int:account_id>', methods=['DELETE'])
+@login_required
+def remove_bank_account(account_id):
+    """Remove/deactivate a bank account"""
+    try:
+        account = BankAccount.query.filter_by(
+            id=account_id,
+            plan_id=current_user.active_plan.id
+        ).first()
+        
+        if not account:
+            return jsonify({'success': False, 'message': 'Bank account not found'})
+        
+        # Deactivate instead of deleting to preserve transaction history
+        account.is_active = False
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Bank account removed successfully'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error removing account: {str(e)}'})

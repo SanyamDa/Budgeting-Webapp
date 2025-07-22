@@ -79,8 +79,15 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {% if request.path == url_for('views.receipt_ai') %}active{% endif %}" href="{{ url_for('views.receipt_ai') }}">
-                    <i class='bx bx-camera'></i> <span class="sidebar-text">Receipt AI</span>
+                <a class="nav-link" href="{{ url_for('views.receipt_ai') }}">
+                    <i class="bx bx-receipt"></i>
+                    <span class="nav-text">Receipt AI</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('views.bank_accounts') }}">
+                    <i class="bx bx-bank"></i>
+                    <span class="nav-text">Bank Accounts</span>
                 </a>
             </li>
 
