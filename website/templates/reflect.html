@@ -63,13 +63,13 @@
                         <div class="row g-2">
                             <div class="col-md-6 mb-3">
                                 <div class="text-center">
-                                    <h5 class="text-primary mb-1">${{ "%.2f"|format(summary_stats.avg_monthly) }}</h5>
+                                    <h5 class="text-primary mb-1">฿{{ "%.2f"|format(summary_stats.avg_monthly) }}</h5>
                                     <small class="text-muted">Average Monthly Spending</small>
                                 </div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <div class="text-center">
-                                    <h5 class="text-info mb-1">${{ "%.2f"|format(summary_stats.avg_daily) }}</h5>
+                                    <h5 class="text-info mb-1">฿{{ "%.2f"|format(summary_stats.avg_daily) }}</h5>
                                     <small class="text-muted">Average Daily Spending</small>
                                 </div>
                             </div>
@@ -81,7 +81,7 @@
                             </div>
                             <div class="col-md-6 mb-3">
                                 <div class="text-center">
-                                    <h5 class="text-warning mb-1">${{ "%.2f"|format(summary_stats.largest_transaction) }}</h5>
+                                    <h5 class="text-warning mb-1">฿{{ "%.2f"|format(summary_stats.largest_transaction) }}</h5>
                                     <small class="text-muted">Largest Transaction</small>
                                 </div>
                             </div>
@@ -107,7 +107,7 @@
                                 <div class="mb-3">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
                                         <span class="text-white">{{ item.name }}</span>
-                                        <span class="text-white font-weight-bold">${{ "%.2f"|format(item.amount) }}</span>
+                                        <span class="text-white font-weight-bold">฿{{ "%.2f"|format(item.amount) }}</span>
                                     </div>
                                     <div class="progress" style="height: 8px;">
                                         <div class="progress-bar" role="progressbar" style="width: {{ item.percentage }}%; background-color: {{ item.color }};" aria-valuenow="{{ item.percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
@@ -129,7 +129,7 @@
                                 <div class="mb-3">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
                                         <span class="text-white">{{ item.name }}</span>
-                                        <span class="text-white font-weight-bold">${{ "%.2f"|format(item.amount) }}</span>
+                                        <span class="text-white font-weight-bold">฿{{ "%.2f"|format(item.amount) }}</span>
                                     </div>
                                     <div class="progress" style="height: 8px;">
                                         <div class="progress-bar" role="progressbar" style="width: {{ item.percentage }}%; background-color: {{ item.color }};" aria-valuenow="{{ item.percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
@@ -151,7 +151,7 @@
                                 <div class="mb-3">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
                                         <span class="text-white">{{ item.name }}</span>
-                                        <span class="text-white font-weight-bold">${{ "%.2f"|format(item.amount) }}</span>
+                                        <span class="text-white font-weight-bold">฿{{ "%.2f"|format(item.amount) }}</span>
                                     </div>
                                     <div class="progress" style="height: 8px;">
                                         <div class="progress-bar" role="progressbar" style="width: {{ item.percentage }}%; background-color: {{ item.color }};" aria-valuenow="{{ item.percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
@@ -193,13 +193,13 @@
                 <div class="col-md-6">
                     <div class="text-left">
                         <small class="text-muted">Average Monthly Spending</small>
-                        <h2 class="text-white mb-0" id="trendsAvgMonthly">${{ "%.2f"|format(summary_stats.avg_monthly) }}</h2>
+                        <h2 class="text-white mb-0" id="trendsAvgMonthly">฿{{ "%.2f"|format(summary_stats.avg_monthly) }}</h2>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="text-left">
                         <small class="text-muted">Total Spending</small>
-                        <h2 class="text-white mb-0" id="trendsTotalSpending">${{ "%.2f"|format(total_spending) }}</h2>
+                        <h2 class="text-white mb-0" id="trendsTotalSpending">฿{{ "%.2f"|format(total_spending) }}</h2>
                     </div>
                 </div>
             </div>
@@ -236,17 +236,17 @@
                                     {% for month_data in monthly_breakdown %}
                                     <tr>
                                         <td class="px-4 py-3 text-white">{{ month_data.month_name }}</td>
-                                        <td class="px-4 py-3 text-white text-right font-weight-bold">${{ "%.2f"|format(month_data.amount) }}</td>
+                                        <td class="px-4 py-3 text-white text-right font-weight-bold">฿{{ "%.2f"|format(month_data.amount) }}</td>
                                         <td class="px-4 py-3 text-right">
                                             {% set avg_monthly = summary_stats.avg_monthly %}
                                             {% set difference = month_data.amount - avg_monthly %}
                                             {% set percentage = ((difference / avg_monthly) * 100) if avg_monthly > 0 else 0 %}
                                             {% if difference > 0 %}
-                                                <span class="text-success">${{ "%.2f"|format(difference) }} ({{ "%.1f"|format(percentage) }}%)</span>
+                                                <span class="text-success">฿{{ "%.2f"|format(difference) }} ({{ "%.1f"|format(percentage) }}%)</span>
                                             {% elif difference < 0 %}
-                                                <span class="text-danger">${{ "%.2f"|format(difference) }} ({{ "%.1f"|format(percentage) }}%)</span>
+                                                <span class="text-danger">฿{{ "%.2f"|format(difference) }} ({{ "%.1f"|format(percentage) }}%)</span>
                                             {% else %}
-                                                <span class="text-muted">$0.00 (0.0%)</span>
+                                                <span class="text-muted">฿0.00 (0.0%)</span>
                                             {% endif %}
                                         </td>
                                     </tr>
@@ -487,7 +487,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         ticks: {
                             color: '#fff',
                             callback: function(value) {
-                                return '$' + value.toFixed(0);
+                                return '฿' + value.toFixed(0);
                             }
                         },
                         title: {
@@ -544,11 +544,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const peakDay = document.getElementById('peakDay');
         const trendsTotalSpending = document.getElementById('trendsTotalSpending');
         
-        if (trendsAvgMonthly) trendsAvgMonthly.textContent = '$' + avgMonthly.toFixed(2);
-        if (trendsAvgDaily) trendsAvgDaily.textContent = '$' + avgDaily.toFixed(2);
+        if (trendsAvgMonthly) trendsAvgMonthly.textContent = '฿' + avgMonthly.toFixed(2);
+        if (trendsAvgDaily) trendsAvgDaily.textContent = '฿' + avgDaily.toFixed(2);
         if (trendDirection) trendDirection.textContent = totalAmount > 1500 ? '↗ Increasing' : '↘ Decreasing';
-        if (peakDay) peakDay.textContent = '$' + Math.max(avgDaily * 2.5, 50).toFixed(2);
-        if (trendsTotalSpending) trendsTotalSpending.textContent = '$' + totalAmount.toFixed(2);
+        if (peakDay) peakDay.textContent = '฿' + Math.max(avgDaily * 2.5, 50).toFixed(2);
+        if (trendsTotalSpending) trendsTotalSpending.textContent = '฿' + totalAmount.toFixed(2);
     }
     
     // Event listeners for trends tab selectors

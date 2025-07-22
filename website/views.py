@@ -1,12 +1,23 @@
 from dateutil.relativedelta import relativedelta
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
-from werkzeug.security import generate_password_hash 
+from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for
 from flask_login import login_required, current_user
-from .models import BudgetCategory, Transaction, Plan, MonthlyBudget, MonthlyRollover, Payee
-from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy import func
+from .models import Note, User, Plan, BudgetCategory, Transaction, Payee, MonthlyBudget, MonthlyRollover
 from . import db
-import datetime
+import json
+from datetime import datetime, timedelta
+from sqlalchemy import func, extract, desc
+from sqlalchemy.orm.attributes import flag_modified
+import re
+import os
+from openai import OpenAI
+import base64
+from io import BytesIO
+import random
+from PIL import Image
+import pillow_heif
+
+# Register HEIF opener with PIL
+pillow_heif.register_heif_opener()
 
 views = Blueprint('views', __name__)
 
@@ -22,14 +33,14 @@ def home(year=None, month=None):
 
     # Determine the date to display
     if year is None or month is None:
-        today = datetime.datetime.now()
+        today = datetime.now()
         year, month = today.year, today.month
     
     try:
-        display_date = datetime.datetime(year, month, 1)
+        display_date = datetime(year, month, 1)
     except ValueError:
         # Handle invalid month/year in URL
-        today = datetime.datetime.now()
+        today = datetime.now()
         year, month = today.year, today.month
         display_date = today
 
@@ -39,7 +50,7 @@ def home(year=None, month=None):
     user_join_date = current_user.date_created
     if user_join_date is None:
         # If the user has no join date, set it to now to prevent crash and fix the data.
-        user_join_date = datetime.datetime.now()
+        user_join_date = datetime.now()
         current_user.date_created = user_join_date
         db.session.commit()
 
@@ -184,7 +195,7 @@ def update_assigned():
         return jsonify({'success': False, 'message': 'Category not found'}), 404
 
     # Determine month/year
-    now = datetime.datetime.now()
+    now = datetime.now()
     mb = MonthlyBudget.query.filter_by(plan_id=category.plan_id, category_id=category_id, month=now.month, year=now.year).first()
     if not mb:
         mb = MonthlyBudget(plan_id=category.plan_id, category_id=category_id, month=now.month, year=now.year)
@@ -272,7 +283,7 @@ def update_category_amount():
         max_allowed = plan.monthly_income * category_ratio if plan.monthly_income else 0
         
         # Get current total assigned to this main category
-        current_date = datetime.datetime.now()
+        current_date = datetime.now()
         current_month = current_date.month
         current_year = current_date.year
         
@@ -301,7 +312,7 @@ def update_category_amount():
             return jsonify({'success': False, 'error': error_msg}), 400
         # Update the category amount
         # Get current month and year
-        current_date = datetime.datetime.now()
+        current_date = datetime.now()
         current_month = current_date.month
         current_year = current_date.year
         
@@ -674,10 +685,10 @@ def transactions():
     monthly_allowance = plan.monthly_income or 0.0
 
     # Determine current month/year
-    today = datetime.datetime.now()
-    start_of_month = datetime.datetime(today.year, today.month, 1)
-    end_of_month = start_of_month + datetime.timedelta(days=32)
-    end_of_month = datetime.datetime(end_of_month.year, end_of_month.month, 1)
+    today = datetime.now()
+    start_of_month = datetime(today.year, today.month, 1)
+    end_of_month = start_of_month + timedelta(days=32)
+    end_of_month = datetime(end_of_month.year, end_of_month.month, 1)
 
     # Sum all transaction amounts for this plan in the current month (expenses are stored as negative)
     activity_sum = db.session.query(func.sum(Transaction.amount)).filter(
@@ -727,7 +738,7 @@ def reflect():
     month_options = []
     for month_key in sorted_months:
         year, month = month_key.split('-')
-        month_name = datetime.datetime(int(year), int(month), 1).strftime('%b %Y')
+        month_name = datetime(int(year), int(month), 1).strftime('%b %Y')
         month_options.append({'value': month_key, 'display': month_name})
     
     current_month = sorted_months[0] if sorted_months else None
@@ -745,11 +756,11 @@ def reflect():
     
     if current_month:
         year, month = current_month.split('-')
-        start_of_month = datetime.datetime(int(year), int(month), 1)
+        start_of_month = datetime(int(year), int(month), 1)
         if int(month) == 12:
-            end_of_month = datetime.datetime(int(year) + 1, 1, 1)
+            end_of_month = datetime(int(year) + 1, 1, 1)
         else:
-            end_of_month = datetime.datetime(int(year), int(month) + 1, 1)
+            end_of_month = datetime(int(year), int(month) + 1, 1)
         
         month_transactions = db.session.query(Transaction).filter(
             Transaction.plan_id == plan.id,
@@ -829,11 +840,11 @@ def reflect():
         month_totals = {}
         for month_key in sorted_months:
             year, month = month_key.split('-')
-            start_of_month = datetime.datetime(int(year), int(month), 1)
+            start_of_month = datetime(int(year), int(month), 1)
             if int(month) == 12:
-                end_of_month = datetime.datetime(int(year) + 1, 1, 1)
+                end_of_month = datetime(int(year) + 1, 1, 1)
             else:
-                end_of_month = datetime.datetime(int(year), int(month) + 1, 1)
+                end_of_month = datetime(int(year), int(month) + 1, 1)
             
             month_transactions = db.session.query(Transaction).filter(
                 Transaction.plan_id == plan.id,
@@ -842,7 +853,7 @@ def reflect():
             ).all()
             
             month_total = sum(abs(tx.amount) for tx in month_transactions)
-            month_name = datetime.datetime(int(year), int(month), 1).strftime('%b %Y')
+            month_name = datetime(int(year), int(month), 1).strftime('%b %Y')
             month_totals[month_key] = {'amount': month_total, 'name': month_name}
         
         # Calculate percentages
@@ -858,11 +869,11 @@ def reflect():
     # Calculate real daily spending data for current month
     if current_month:
         year, month = current_month.split('-')
-        start_of_month = datetime.datetime(int(year), int(month), 1)
+        start_of_month = datetime(int(year), int(month), 1)
         if int(month) == 12:
-            end_of_month = datetime.datetime(int(year) + 1, 1, 1)
+            end_of_month = datetime(int(year) + 1, 1, 1)
         else:
-            end_of_month = datetime.datetime(int(year), int(month) + 1, 1)
+            end_of_month = datetime(int(year), int(month) + 1, 1)
         
         # Get all transactions for the current month
         current_month_transactions = db.session.query(Transaction).filter(
@@ -931,10 +942,576 @@ def receipt_ai():
     # Get user's categories for the dropdown
     plan = current_user.active_plan
     categories = []
+    ai_transactions = []
+    
     if plan:
         categories = BudgetCategory.query.filter_by(plan_id=plan.id).all()
+        
+        # Get recent AI-created transactions (those with 'Receipt AI:' in description)
+        ai_transactions = Transaction.query.filter(
+            Transaction.plan_id == plan.id,
+            Transaction.description.like('Receipt AI:%')
+        ).order_by(Transaction.created_date.desc()).limit(10).all()
     
-    return render_template('receipt_ai.html', categories=categories)
+    return render_template('receipt_ai.html', categories=categories, ai_transactions=ai_transactions)
+
+
+@views.route('/api/receipt_ai/create_transaction', methods=['POST'])
+@login_required
+def create_receipt_transaction():
+    """Create a transaction from Receipt AI extracted data"""
+    try:
+        data = request.get_json()
+        
+        # Handle both old format (merchant_name) and new format (vendor)
+        vendor_name = data.get('vendor', data.get('merchant_name', '')).strip()
+        amount = float(data.get('amount', 0))
+        date_str = data.get('date', '')
+        category_id = int(data.get('category_id', 0))
+        payee_id = data.get('payee_id')  # May be None for manual entries
+        
+        if not vendor_name or amount <= 0 or not date_str or not category_id:
+            return jsonify({'success': False, 'message': 'All fields are required'})
+        
+        print(f"DEBUG: Creating transaction - Vendor: {vendor_name}, Amount: {amount}, Category ID: {category_id}, Payee ID: {payee_id}")
+        
+        # Parse date
+        try:
+            transaction_date = datetime.strptime(date_str, '%Y-%m-%d')
+        except ValueError:
+            return jsonify({'success': False, 'message': 'Invalid date format'})
+        
+        # Get category
+        category = BudgetCategory.query.filter_by(
+            id=category_id, 
+            plan_id=current_user.active_plan.id
+        ).first()
+        
+        if not category:
+            return jsonify({'success': False, 'message': 'Invalid category'})
+        
+        # Handle payee - use provided payee_id or create/find payee
+        if payee_id:
+            # Use the payee_id from AI analysis
+            payee = Payee.query.filter_by(
+                id=payee_id,
+                plan_id=current_user.active_plan.id
+            ).first()
+            
+            if not payee:
+                return jsonify({'success': False, 'message': 'Invalid payee ID'})
+                
+        else:
+            # Fallback: create or find payee by name (for manual entries)
+            payee = Payee.query.filter_by(
+                name=vendor_name,
+                plan_id=current_user.active_plan.id
+            ).first()
+            
+            if not payee:
+                payee = Payee(
+                    name=vendor_name,
+                    plan_id=current_user.active_plan.id
+                )
+                db.session.add(payee)
+                db.session.flush()  # Get the payee ID
+        
+        # Create transaction
+        new_transaction = Transaction(
+            amount=-abs(amount),  # Negative for expense
+            description=f'Receipt AI: {vendor_name}',
+            transaction_date=transaction_date,
+            category_id=category_id,
+            payee_id=payee.id,
+            plan_id=current_user.active_plan.id
+        )
+        
+        db.session.add(new_transaction)
+        
+        # Update category spent amount
+        category.spent_amount += abs(amount)
+        
+        db.session.commit()
+        
+        print(f"DEBUG: Transaction created successfully - ID: {new_transaction.id}")
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Transaction created: ฿{amount:.2f} at {vendor_name}',
+            'transaction_id': new_transaction.id,
+            'category_name': f'{category.main_category.title()} - {category.name}'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"DEBUG: Error creating transaction: {e}")
+        return jsonify({'success': False, 'message': f'Error creating transaction: {str(e)}'})
+
+
+@views.route('/api/receipt_ai/process_image', methods=['POST'])
+@login_required
+def process_receipt_image():
+    """Process uploaded receipt image with Smart AI extraction"""
+    try:
+        print("DEBUG: Starting receipt image processing...")
+        data = request.get_json()
+        image_data = data.get('image_data', '')
+        
+        if not image_data:
+            return jsonify({'success': False, 'message': 'No image data provided'})
+        
+        print(f"DEBUG: Image data length: {len(image_data)} characters")
+        
+        # Analyze the receipt image for real data extraction with OpenAI Vision API
+        parsed_data = analyze_receipt_image(image_data)
+        
+        print(f"DEBUG: AI analysis completed successfully: {parsed_data}")
+        
+        # Handle both old 'merchant' and new 'vendor' field names
+        vendor_name = parsed_data.get('vendor', parsed_data.get('merchant', 'Unknown Vendor'))
+        
+        return jsonify({
+            'success': True,
+            'extracted_text': f'Smart AI analyzed receipt: {vendor_name}',
+            'parsed_data': parsed_data
+        })
+            
+    except Exception as e:
+        print(f"DEBUG: Error in process_receipt_image: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Error processing image: {str(e)}'})
+
+
+def analyze_receipt_image(image_data):
+    """Analyze receipt image using OpenAI Vision API to extract real merchant, amount, and date"""
+    
+    try:
+        # Initialize OpenAI client with API key from environment
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        
+        # Extract base64 image data and determine image format
+        if 'data:image/' in image_data and 'base64,' in image_data:
+            # Extract the image format (e.g., 'jpeg', 'png')
+            format_part = image_data.split('data:image/')[1].split(';base64,')[0]
+            base64_image = image_data.split('base64,')[1]
+            
+            print(f"DEBUG: Detected image format: {format_part}")
+            print(f"DEBUG: Base64 data length: {len(base64_image)}")
+            print(f"DEBUG: First 50 chars of base64: {base64_image[:50]}")
+            
+            # Ensure format is supported by OpenAI
+            supported_formats = ['png', 'jpeg', 'jpg', 'gif', 'webp']
+            if format_part.lower() not in supported_formats:
+                print(f"DEBUG: Unsupported format {format_part}, defaulting to jpeg")
+                format_part = 'jpeg'  # Default to jpeg if unsupported
+            else:
+                print(f"DEBUG: Format {format_part} is supported")
+                
+        else:
+            print(f"DEBUG: No proper data URL format detected, using defaults")
+            print(f"DEBUG: Image data preview: {image_data[:100]}")
+            base64_image = image_data
+            format_part = 'jpeg'  # Default format
+            
+        print(f"DEBUG: Final format being sent to OpenAI: {format_part}")
+        
+        # Convert image to JPEG if it's in an unsupported format or corrupted
+        try:
+            # Decode base64 to check actual image format
+            image_bytes = base64.b64decode(base64_image)
+            print(f"DEBUG: Decoded image bytes length: {len(image_bytes)}")
+            
+            # Check for HEIC/HEIF format signatures
+            is_heic = False
+            if len(image_bytes) > 20:
+                # Check for HEIC/HEIF signatures
+                if (b'ftyp' in image_bytes[:20] and 
+                    (b'heic' in image_bytes[:30] or b'heix' in image_bytes[:30] or 
+                     b'mif1' in image_bytes[:30] or b'msf1' in image_bytes[:30])):
+                    is_heic = True
+                    print("DEBUG: Detected HEIC/HEIF format based on file signature")
+            
+            # Always try to convert to JPEG for maximum compatibility
+            if is_heic or format_part.lower() != 'jpeg':
+                print(f"DEBUG: Converting {'HEIC' if is_heic else format_part} to JPEG for OpenAI compatibility")
+                converted_image = convert_image_to_jpeg(image_bytes)
+                
+                if converted_image != image_bytes:  # Conversion was successful
+                    base64_image = base64.b64encode(converted_image).decode('utf-8')
+                    format_part = 'jpeg'
+                    print(f"DEBUG: Successfully converted to JPEG, new data length: {len(base64_image)}")
+                else:
+                    print("DEBUG: Conversion failed, using original data")
+                
+        except Exception as e:
+            print(f"DEBUG: Image conversion failed: {e}, proceeding with original")
+        
+        # Get existing subcategories for intelligent matching
+        existing_subcategories = get_existing_subcategories_for_ai(current_user.active_plan_id)
+        
+        # Create a sophisticated prompt for vendor and subcategory analysis
+        prompt = f"""
+        You are an expert receipt analyzer and financial categorization specialist. Analyze this receipt image and extract the following information:
+        
+        1. **Vendor Name**: Extract the ACTUAL VENDOR/BUSINESS name, not the mall, building, or organization. For example:
+           - If it's "Starbucks at Central World", extract "Starbucks"
+           - If it's "KFC Terminal 21", extract "KFC"
+           - If it's "Krua Boon Vegetarian Restaurant", extract "Krua Boon"
+           - Focus on the brand/business, not the location
+        
+        2. **Total Amount**: The final total amount paid (look for "Total", "Amount Due", or similar)
+        
+        3. **Date**: The transaction date (format as YYYY-MM-DD)
+        
+        4. **Main Category**: Determine if this expense is:
+           - "Needs": Essential expenses (groceries, utilities, transportation, medical, rent)
+           - "Wants": Non-essential expenses (dining out, entertainment, shopping, coffee)
+           - "Investments": Investment-related expenses (rare, usually financial services)
+        
+        5. **Subcategory**: Based on the vendor and expense type, suggest a specific subcategory. 
+           EXISTING SUBCATEGORIES in the user's budget:
+           {existing_subcategories}
+           
+           - If a matching subcategory exists, use it EXACTLY as shown
+           - If no match exists, suggest a new specific subcategory name (e.g., "Thai Food", "Coffee Shops", "Groceries")
+           - Make subcategories specific but not too narrow ("Restaurants" not "Thai Vegetarian Restaurants")
+        
+        CRITICAL INSTRUCTIONS:
+        - Extract the VENDOR/BRAND name, not the mall or location
+        - Look for the TOTAL amount, not subtotals
+        - Match existing subcategories when possible
+        - Suggest new subcategories that are specific but reusable
+        - Thai baht currency should be included
+        
+        Respond ONLY with a JSON object in this exact format:
+        {{
+            "vendor": "Actual vendor/brand name",
+            "amount": 123.45,
+            "date": "2024-07-20",
+            "main_category": "Wants",
+            "subcategory": "Thai Food",
+            "subcategory_exists": true,
+            "confidence": "high"
+        }}
+        """
+        
+        # Call OpenAI Vision API
+        print(f"DEBUG: About to call OpenAI Vision API with image format: {format_part}")
+        print(f"DEBUG: Base64 image length: {len(base64_image)} characters")
+        print(f"DEBUG: Prompt length: {len(prompt)} characters")
+        
+        try:
+            import httpx
+            
+            # Create client with timeout
+            client = OpenAI(
+                api_key=os.getenv('OPENAI_API_KEY'),
+                timeout=httpx.Timeout(60.0, read=60.0, write=10.0, connect=5.0)
+            )
+            
+            response = client.chat.completions.create(
+                model="gpt-4o",  # Use GPT-4 Vision model
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": prompt
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/{format_part};base64,{base64_image}"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                max_tokens=500,
+                temperature=0.1  # Low temperature for consistent, accurate results
+            )
+            print(f"DEBUG: OpenAI API call successful")
+            
+        except Exception as openai_error:
+            print(f"DEBUG: OpenAI API call failed: {type(openai_error).__name__}: {openai_error}")
+            raise Exception(f"OpenAI Vision API error: {str(openai_error)}")
+        
+        # Parse the AI response
+        ai_response = response.choices[0].message.content.strip()
+        
+        # Extract JSON from the response
+        try:
+            print(f"DEBUG: Raw AI response text: {ai_response[:500]}...")  # Show first 500 chars
+            
+            # Find JSON in the response (in case there's extra text)
+            json_match = re.search(r'\{.*\}', ai_response, re.DOTALL)
+            if json_match:
+                json_text = json_match.group()
+                print(f"DEBUG: Extracted JSON: {json_text}")
+                ai_data = json.loads(json_text)
+            else:
+                print(f"DEBUG: No JSON pattern found, trying to parse entire response")
+                ai_data = json.loads(ai_response)
+            
+            # Validate and extract data from AI response (handle both merchant and vendor field names)
+            vendor = ai_data.get('vendor', ai_data.get('merchant', 'Unknown Vendor'))
+            amount = float(ai_data.get('amount', 0.0))
+            date = ai_data.get('date', datetime.now().strftime('%Y-%m-%d'))
+            main_category = ai_data.get('main_category', ai_data.get('business_type', 'Wants'))
+            subcategory = ai_data.get('subcategory', 'General')
+            subcategory_exists = ai_data.get('subcategory_exists', False)
+            confidence = ai_data.get('confidence', 'medium')
+            
+            print(f"DEBUG: Raw AI response: {ai_data}")
+            
+            print(f"DEBUG: AI extracted - Vendor: {vendor}, Amount: {amount}, Category: {main_category}, Subcategory: {subcategory}")
+            
+            # Process subcategory: find existing or create new
+            category_id = process_subcategory(current_user.active_plan_id, main_category, subcategory, subcategory_exists)
+            
+            # Process payee: find existing or create new
+            payee_id = process_payee(current_user.active_plan_id, vendor)
+            
+            result = {
+                'vendor': vendor,
+                'amount': amount,
+                'date': date,
+                'main_category': main_category,
+                'subcategory': subcategory,
+                'category_id': category_id,
+                'payee_id': payee_id,
+                'confidence': confidence
+            }
+            
+            return result
+            
+        except json.JSONDecodeError as e:
+            print(f"Error parsing AI response JSON: {e}")
+            print(f"AI Response: {ai_response}")
+            # Fallback to basic extraction
+            return fallback_receipt_analysis()
+            
+    except Exception as e:
+        print(f"Error with OpenAI Vision API: {e}")
+        # Fallback to basic extraction
+        return fallback_receipt_analysis()
+
+
+def determine_smart_category_from_business_type(merchant, business_type):
+    """Intelligently determine the most appropriate budget category based on business type"""
+    
+    # Category mapping based on business type from OpenAI analysis
+    category_mappings = {
+        'restaurant': 'Wants',        # Restaurants are typically Wants
+        'coffee_shop': 'Wants',       # Coffee shops are Wants
+        'convenience_store': 'Needs', # Basic necessities could be Needs
+        'grocery': 'Needs',           # Groceries are Needs
+        'retail': 'Wants',            # Shopping/retail is typically Wants
+        'pharmacy': 'Needs',          # Medical/pharmacy is a Need
+        'transport': 'Needs',         # Transportation is a Need
+        'entertainment': 'Wants',     # Entertainment is a Want
+        'other': 'Wants'              # Default to Wants
+    }
+    
+    # Special cases based on merchant name for more accuracy
+    merchant_lower = merchant.lower()
+    
+    # Medical/health related - always Needs
+    if any(word in merchant_lower for word in ['hospital', 'clinic', 'pharmacy', 'medical', 'doctor']):
+        return 'Needs'
+    
+    # Transportation - always Needs
+    elif any(word in merchant_lower for word in ['bts', 'mrt', 'taxi', 'grab', 'transport', 'bus', 'train']):
+        return 'Needs'
+    
+    # Supermarkets/groceries - Needs
+    elif any(word in merchant_lower for word in ['tops', 'big c', 'lotus', 'makro', 'supermarket', 'market']):
+        return 'Needs'
+    
+    # Utilities and essential services - Needs
+    elif any(word in merchant_lower for word in ['electric', 'water', 'gas', 'internet', 'phone', 'utility']):
+        return 'Needs'
+    
+    # Use business type mapping
+    return category_mappings.get(business_type, 'Wants')
+
+
+def convert_image_to_jpeg(image_bytes):
+    """Convert image bytes to JPEG format for OpenAI compatibility"""
+    try:
+        print(f"DEBUG: Attempting to convert image, input size: {len(image_bytes)} bytes")
+        
+        # Try to open image with PIL (now supports HEIC with pillow-heif)
+        image_buffer = BytesIO(image_bytes)
+        image = Image.open(image_buffer)
+        
+        print(f"DEBUG: Successfully opened image: {image.format}, {image.mode}, {image.size}")
+        
+        # Convert to RGB if necessary (for PNG with transparency, HEIC, etc.)
+        if image.mode in ('RGBA', 'LA', 'P'):
+            print(f"DEBUG: Converting from {image.mode} to RGB with white background")
+            # Create a white background
+            background = Image.new('RGB', image.size, (255, 255, 255))
+            if image.mode == 'P':
+                image = image.convert('RGBA')
+            background.paste(image, mask=image.split()[-1] if image.mode in ('RGBA', 'LA') else None)
+            image = background
+        elif image.mode != 'RGB':
+            print(f"DEBUG: Converting from {image.mode} to RGB")
+            image = image.convert('RGB')
+        
+        # Save as JPEG
+        output_buffer = BytesIO()
+        image.save(output_buffer, format='JPEG', quality=85, optimize=True)
+        jpeg_bytes = output_buffer.getvalue()
+        
+        print(f"DEBUG: Successfully converted to JPEG, output size: {len(jpeg_bytes)} bytes")
+        return jpeg_bytes
+        
+    except Exception as e:
+        print(f"DEBUG: Error converting image: {type(e).__name__}: {e}")
+        print(f"DEBUG: Returning original bytes of size: {len(image_bytes)}")
+        # Return original bytes if conversion fails
+        return image_bytes
+
+
+def get_existing_subcategories_for_ai(plan_id):
+    """Get existing subcategories organized by main category for AI prompt"""
+    try:
+        from .models import BudgetCategory
+        
+        categories = BudgetCategory.query.filter_by(plan_id=plan_id).all()
+        
+        organized = {
+            'Needs': [],
+            'Wants': [],
+            'Investments': []
+        }
+        
+        for category in categories:
+            main_cat = category.main_category.title()  # Convert to title case
+            if main_cat in organized:
+                organized[main_cat].append(category.name)
+        
+        # Format for AI prompt
+        formatted = []
+        for main_cat, subcats in organized.items():
+            if subcats:
+                formatted.append(f"{main_cat}: {', '.join(subcats)}")
+        
+        return '\n           '.join(formatted) if formatted else "No existing subcategories"
+        
+    except Exception as e:
+        print(f"Error getting subcategories: {e}")
+        return "No existing subcategories"
+
+
+def process_subcategory(plan_id, main_category, subcategory_name, subcategory_exists):
+    """Find existing subcategory or create new one, return category_id"""
+    try:
+        from .models import BudgetCategory
+        
+        # Normalize main category
+        main_category = main_category.lower()
+        
+        print(f"DEBUG: Processing subcategory - Main: {main_category}, Sub: {subcategory_name}, Exists: {subcategory_exists}")
+        
+        # First, try to find existing subcategory
+        existing_category = BudgetCategory.query.filter_by(
+            plan_id=plan_id,
+            main_category=main_category,
+            name=subcategory_name
+        ).first()
+        
+        if existing_category:
+            print(f"DEBUG: Found existing subcategory: {existing_category.name} (ID: {existing_category.id})")
+            return existing_category.id
+        
+        # If not found, create new subcategory
+        print(f"DEBUG: Creating new subcategory: {subcategory_name} in {main_category}")
+        
+        new_category = BudgetCategory(
+            name=subcategory_name,
+            main_category=main_category,
+            plan_id=plan_id,
+            assigned_amount=0.0,
+            spent_amount=0.0
+        )
+        
+        db.session.add(new_category)
+        db.session.commit()
+        
+        print(f"DEBUG: Created new subcategory: {new_category.name} (ID: {new_category.id})")
+        return new_category.id
+        
+    except Exception as e:
+        print(f"DEBUG: Error processing subcategory: {e}")
+        # Fallback: try to find any category in the main category
+        try:
+            fallback_category = BudgetCategory.query.filter_by(
+                plan_id=plan_id,
+                main_category=main_category.lower()
+            ).first()
+            if fallback_category:
+                return fallback_category.id
+        except:
+            pass
+        return None
+
+
+def process_payee(plan_id, vendor_name):
+    """Find existing payee or create new one, return payee_id"""
+    try:
+        from .models import Payee
+        
+        print(f"DEBUG: Processing payee: {vendor_name}")
+        
+        # Try to find existing payee (case-insensitive)
+        existing_payee = Payee.query.filter(
+            Payee.plan_id == plan_id,
+            func.lower(Payee.name) == func.lower(vendor_name)
+        ).first()
+        
+        if existing_payee:
+            print(f"DEBUG: Found existing payee: {existing_payee.name} (ID: {existing_payee.id})")
+            return existing_payee.id
+        
+        # Create new payee
+        print(f"DEBUG: Creating new payee: {vendor_name}")
+        
+        new_payee = Payee(
+            name=vendor_name,
+            plan_id=plan_id
+        )
+        
+        db.session.add(new_payee)
+        db.session.commit()
+        
+        print(f"DEBUG: Created new payee: {new_payee.name} (ID: {new_payee.id})")
+        return new_payee.id
+        
+    except Exception as e:
+        print(f"DEBUG: Error processing payee: {e}")
+        return None
+
+
+def fallback_receipt_analysis():
+    """Fallback analysis when OpenAI Vision API fails"""
+    
+    # Simple fallback with reasonable defaults
+    result = {
+        'vendor': 'Unknown Vendor',
+        'amount': 100.00,
+        'date': datetime.now().strftime('%Y-%m-%d'),
+        'main_category': 'Wants',
+        'subcategory': 'General',
+        'subcategory_exists': False,
+        'confidence': 'low'
+    }
+    
+    return result
 
 
 @views.route('/add_category', methods=['POST'])
@@ -1192,7 +1769,7 @@ def update_budget_form():
     max_allowed = plan.monthly_income * category_ratio if plan.monthly_income else 0
     
     # Calculate current total for this main category (excluding the category being updated)
-    current_date = datetime.datetime.now()
+    current_date = datetime.now()
     current_month = current_date.month
     current_year = current_date.year
     
