@@ -134,7 +134,7 @@
                         <label for="assignedAmount" style="font-weight: 500; color: #495057;">Amount to Assign</label>
                         <div class="input-group">
                             <div class="input-group-prepend">
-                                <span class="input-group-text">$</span>
+                                <span class="input-group-text">฿</span>
                             </div>
                             <input type="number" class="form-control" id="assignedAmount" name="amount" step="0.01" min="0" placeholder="0.00" required>
                         </div>
@@ -241,7 +241,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Get category name from the row
             const categoryName = this.closest('tr').querySelector('span').textContent;
-            const currentAmount = parseFloat(this.textContent.replace('$', ''));
+            const currentAmount = parseFloat(this.textContent.replace('฿', ''));
             
             // Populate modal
             document.getElementById('categoryName').value = categoryName;
@@ -808,7 +808,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 parseFloat(mainCategoryRow.getAttribute('data-max-limit') || '0') : 0;
     
             const remaining = mainCategoryLimit - (mainCategoryAssigned - currentAmount);
-            const limitInfoText = `Maximum allowed for ${mainCategoryName}: $${remaining.toFixed(2)}`;
+            const limitInfoText = `Maximum allowed for ${mainCategoryName}: ฿${remaining.toFixed(2)}`;
     
             editModal.querySelector('.limit-info').textContent = limitInfoText;
             amountInput.max = remaining;
