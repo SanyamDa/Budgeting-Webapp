@@ -3,3 +3,5 @@
 .env
 .env
 .venv/
+__pycache__/
+eval "$(ssh-agent -s)"*
