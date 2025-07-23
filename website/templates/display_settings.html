@@ -7,7 +7,7 @@
 
 <div class="card shadow mb-4">
     <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Theme</h6>
+        <h6 class="m-0 font-weight-bold" style="color: #000 !important;">Theme</h6>
     </div> 
     <div class="card-body">
         <form method="POST">
@@ -19,7 +19,7 @@
                         <div class="card-body text-center">
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="theme" id="lightTheme" value="light" {% if current_user.theme == 'light' %}checked{% endif %}>
-                                <label class="form-check-label" for="lightTheme">
+                                <label class="form-check-label" for="lightTheme" style="color: #000 !important; font-weight: 500;">
                                     Default
                                 </label>
                             </div>
@@ -34,7 +34,7 @@
                         <div class="card-body text-center">
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="theme" id="darkTheme" value="dark" {% if current_user.theme == 'dark' %}checked{% endif %}>
-                                <label class="form-check-label" for="darkTheme">
+                                <label class="form-check-label" for="darkTheme" style="color: #000 !important; font-weight: 500;">
                                     Dark
                                 </label>
                             </div>
@@ -49,7 +49,7 @@
                         <div class="card-body text-center">
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="theme" id="systemTheme" value="system" {% if current_user.theme == 'system' %}checked{% endif %}>
-                                <label class="form-check-label" for="systemTheme">
+                                <label class="form-check-label" for="systemTheme" style="color: #000 !important; font-weight: 500;">
                                     System
                                 </label>
                             </div>
@@ -64,24 +64,61 @@
 
 <style>
     .theme-card {
-        cursor : pointer;
-        border: 2px solid #e3e6f0;
-        transition: border-color 0.2s ease-in-out;
-        height:100%
+        cursor: pointer;
+        border: 3px solid #e3e6f0;
+        transition: all 0.3s ease;
+        height: 100%;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     .theme-card:hover {
-        border-color: #b1c3f9
+        border-color: #667eea;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
     }
 
     .theme-card.selected {
-        border-color: #4e73df;
+        border-color: #4e73df !important;
+        border-width: 4px !important;
+        box-shadow: 0 6px 20px rgba(78, 115, 223, 0.3) !important;
+        transform: translateY(-3px);
     }
 
     .theme-card img {
         padding: 1rem;
         background-color: #f8f9fc;
         border-bottom: 1px solid #e3e6f0;
+        transition: all 0.3s ease;
+    }
+
+    .theme-card:hover img {
+        background-color: #f0f2ff;
+    }
+
+    .theme-card .card-body {
+        background-color: #ffffff;
+        transition: all 0.3s ease;
+    }
+
+    .theme-card:hover .card-body {
+        background-color: #f8f9ff;
+    }
+
+    .theme-card.selected .card-body {
+        background-color: #f0f4ff !important;
+    }
+
+    /* Ensure radio buttons are visible */
+    .theme-card .form-check-input {
+        transform: scale(1.2);
+        margin-right: 8px;
+    }
+
+    .theme-card .form-check-input:checked {
+        background-color: #4e73df;
+        border-color: #4e73df;
     }
 
 </style>

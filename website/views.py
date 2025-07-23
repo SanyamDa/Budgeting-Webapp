@@ -1,9 +1,9 @@
 from dateutil.relativedelta import relativedelta
 from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for
 from flask_login import login_required, current_user
-from .models import Note, User, Plan, BudgetCategory, Transaction, Payee, MonthlyBudget, BankAccount, MonthlyRollover
+from .models import Note, User, Plan, BudgetCategory, Transaction, Payee, MonthlyBudget, MonthlyRollover
 from . import db
-from .kbank_api import KBankAPI, sync_kbank_account
+
 import json
 from datetime import datetime, timedelta
 from sqlalchemy import func, extract, desc
@@ -21,6 +21,150 @@ import pillow_heif
 pillow_heif.register_heif_opener()
 
 views = Blueprint('views', __name__)
+
+# Helper function for budget validation
+def validate_budget_limit(category, transaction_amount):
+    """
+    Validate if a transaction amount would exceed the category's budget limit.
+    Returns (is_valid, error_message, validation_data)
+    """
+    try:
+        # Calculate current spent amount
+        current_spent = db.session.query(func.sum(func.abs(Transaction.amount))).filter_by(
+            category_id=category.id
+        ).scalar() or 0
+        
+        # Check if this transaction would exceed the category limit
+        new_total_spent = current_spent + transaction_amount
+        available_amount = category.assigned_amount - current_spent
+        
+        if new_total_spent > category.assigned_amount:
+            excess_amount = new_total_spent - category.assigned_amount
+            error_message = f'Transaction exceeds budget limit for "{category.name}" category. Available: ฿{available_amount:.2f}, Requested: ฿{transaction_amount:.2f}, Excess: ฿{excess_amount:.2f}'
+            
+            validation_data = {
+                'error_type': 'budget_exceeded',
+                'available_amount': available_amount,
+                'requested_amount': transaction_amount,
+                'excess_amount': excess_amount,
+                'category_name': category.name,
+                'current_spent': current_spent,
+                'category_limit': category.assigned_amount
+            }
+            
+            return False, error_message, validation_data
+        
+        # Validation passed
+        validation_data = {
+            'available_amount': available_amount,
+            'requested_amount': transaction_amount,
+            'category_name': category.name,
+            'current_spent': current_spent,
+            'category_limit': category.assigned_amount,
+            'new_total_spent': new_total_spent
+        }
+        
+        return True, None, validation_data
+        
+    except Exception as e:
+        return False, f'Error validating budget: {str(e)}', {}
+
+# Additional validation functions
+def validate_transaction_data(amount, description, category_id, plan_id):
+    """
+    Comprehensive validation for transaction data.
+    Returns (is_valid, error_message)
+    """
+    # Amount validation
+    if not amount or amount <= 0:
+        return False, "Transaction amount must be greater than zero"
+    
+    if amount > 1000000:  # 1 million baht limit
+        return False, "Transaction amount exceeds maximum limit of ฿1,000,000"
+    
+    # Description validation
+    if not description or not description.strip():
+        return False, "Transaction description is required"
+    
+    if len(description.strip()) < 2:
+        return False, "Transaction description must be at least 2 characters"
+    
+    if len(description) > 200:
+        return False, "Transaction description must be less than 200 characters"
+    
+    # Category validation
+    if not category_id:
+        return False, "Category is required"
+    
+    category = BudgetCategory.query.filter_by(id=category_id, plan_id=plan_id).first()
+    if not category:
+        return False, "Invalid category selected"
+    
+    return True, None
+
+def validate_monthly_spending_limit(plan, transaction_amount):
+    """
+    Check if transaction would exceed monthly spending limits.
+    Returns (is_valid, warning_message)
+    """
+    try:
+        # Get current month's spending
+        current_date = datetime.now()
+        month_start = current_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        monthly_spent = db.session.query(func.sum(func.abs(Transaction.amount))).filter(
+            Transaction.plan_id == plan.id,
+            Transaction.transaction_date >= month_start
+        ).scalar() or 0
+        
+        # Calculate total monthly budget
+        total_budget = db.session.query(func.sum(BudgetCategory.assigned_amount)).filter_by(
+            plan_id=plan.id
+        ).scalar() or 0
+        
+        new_monthly_total = monthly_spent + transaction_amount
+        
+        # Warning if exceeding 90% of monthly budget
+        if new_monthly_total > (total_budget * 0.9):
+            remaining_budget = total_budget - monthly_spent
+            return False, f"Warning: This transaction will use ฿{transaction_amount:.2f} of your remaining ฿{remaining_budget:.2f} monthly budget. Consider reviewing your spending."
+        
+        return True, None
+        
+    except Exception as e:
+        return True, None  # Don't block transaction for validation errors
+
+def check_duplicate_transaction(plan_id, amount, description, payee_id=None, hours_threshold=1):
+    """
+    Check for potential duplicate transactions within the last few hours.
+    Returns (is_duplicate, warning_message)
+    """
+    try:
+        # Check for similar transactions in the last hour
+        time_threshold = datetime.now() - timedelta(hours=hours_threshold)
+        
+        query = Transaction.query.filter(
+            Transaction.plan_id == plan_id,
+            func.abs(Transaction.amount) == amount,
+            Transaction.transaction_date >= time_threshold
+        )
+        
+        # Add payee filter if provided
+        if payee_id:
+            query = query.filter(Transaction.payee_id == payee_id)
+        
+        # Check description similarity (exact match or very similar)
+        similar_transactions = query.filter(
+            func.lower(Transaction.description).like(f"%{description.lower()}%")
+        ).all()
+        
+        if similar_transactions:
+            return True, f"Warning: Similar transaction detected within the last {hours_threshold} hour(s). Please verify this is not a duplicate."
+        
+        return False, None
+        
+    except Exception as e:
+        return False, None  # Don't block transaction for validation errors
 
 @views.route('/<int:year>/<int:month>')
 @views.route('/')
@@ -421,13 +565,29 @@ def update_category_amount():
 @views.route('/api/add-transaction', methods=['POST'])
 @login_required
 def add_transaction():
-    """API endpoint to add a new transaction"""
+    """API endpoint to add a new transaction with budget validation"""
     try:
         data = request.get_json()
         category_id = data.get('category_id')
         amount = float(data.get('amount', 0))
         description = data.get('description', 'Transaction')
         payee_id = data.get('payee_id')
+        
+        # Comprehensive transaction validation
+        is_valid, error_msg = validate_transaction_data(amount, description, category_id, current_user.active_plan.id)
+        if not is_valid:
+            return jsonify({'success': False, 'error': error_msg}), 400
+        
+        # Check for duplicate transactions
+        is_duplicate, duplicate_warning = check_duplicate_transaction(
+            current_user.active_plan.id, amount, description, payee_id
+        )
+        if is_duplicate:
+            return jsonify({
+                'success': False, 
+                'error': duplicate_warning,
+                'error_type': 'duplicate_warning'
+            }), 400
         
         category = BudgetCategory.query.filter_by(
             id=category_id,
@@ -436,6 +596,16 @@ def add_transaction():
         
         if not category:
             return jsonify({'success': False, 'error': 'Category not found'}), 404
+        
+        # Validate budget limit using helper function
+        is_valid, error_message, validation_data = validate_budget_limit(category, amount)
+        
+        if not is_valid:
+            return jsonify({
+                'success': False, 
+                'error': error_message,
+                **validation_data
+            }), 400
         
         # Create new transaction (amount should be negative for expenses)
         transaction = Transaction(
@@ -450,20 +620,24 @@ def add_transaction():
         db.session.commit()
         
         # Update category spent amount
-        spent = db.session.query(func.sum(Transaction.amount)).filter_by(
+        spent = db.session.query(func.sum(func.abs(Transaction.amount))).filter_by(
             category_id=category.id
         ).scalar() or 0
-        category.spent_amount = abs(spent)
+        category.spent_amount = spent
         db.session.commit()
-    
+        
+        flash(f'Transaction added successfully! ฿{amount:.2f} spent on "{category.name}"', 'success')
 
         return jsonify({
             'success': True,
             'transaction_id': transaction.id,
             'category_spent': category.spent_amount,
-            'category_available': category.available_amount
+            'category_available': category.assigned_amount - category.spent_amount,
+            'message': f'Transaction added successfully! ฿{amount:.2f} spent on "{category.name}"'
         })
         
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Invalid amount format'}), 400
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -991,6 +1165,16 @@ def create_receipt_transaction():
         if not category:
             return jsonify({'success': False, 'message': 'Invalid category'})
         
+        # Validate budget limit using helper function
+        is_valid, error_message, validation_data = validate_budget_limit(category, amount)
+        
+        if not is_valid:
+            return jsonify({
+                'success': False, 
+                'message': f'Receipt transaction exceeds budget limit: {error_message}',
+                **validation_data
+            })
+        
         # Handle payee - use provided payee_id or create/find payee
         if payee_id:
             # Use the payee_id from AI analysis
@@ -1029,18 +1213,25 @@ def create_receipt_transaction():
         
         db.session.add(new_transaction)
         
-        # Update category spent amount
-        category.spent_amount += abs(amount)
+        # Update category spent amount accurately
+        spent = db.session.query(func.sum(func.abs(Transaction.amount))).filter_by(
+            category_id=category.id
+        ).scalar() or 0
+        category.spent_amount = spent
         
         db.session.commit()
         
-        print(f"DEBUG: Transaction created successfully - ID: {new_transaction.id}")
+        print(f"DEBUG: Receipt transaction created successfully - ID: {new_transaction.id}")
+        
+        flash(f'Receipt transaction added successfully! ฿{amount:.2f} spent at {vendor_name} in "{category.name}" category', 'success')
         
         return jsonify({
             'success': True, 
-            'message': f'Transaction created: ฿{amount:.2f} at {vendor_name}',
+            'message': f'Receipt transaction created: ฿{amount:.2f} at {vendor_name}',
             'transaction_id': new_transaction.id,
-            'category_name': f'{category.main_category.title()} - {category.name}'
+            'category_name': f'{category.main_category.title()} - {category.name}',
+            'category_spent': category.spent_amount,
+            'category_available': category.assigned_amount - category.spent_amount
         })
         
     except Exception as e:
@@ -1518,43 +1709,76 @@ def fallback_receipt_analysis():
 @views.route('/add_category', methods=['POST'])
 @login_required
 def add_category():
-    """Add a new category to the current plan."""
+    """Add a new category to the current plan with comprehensive validation."""
     plan = current_user.active_plan
     if not plan:
         flash("No active plan found.", 'error')
         return redirect(url_for('views.home'))
     
     main_category = request.form.get('main_category')
-    category_name = request.form.get('category_name')
+    category_name = request.form.get('category_name', '').strip()
     
+    # Enhanced validation
     if not main_category or not category_name:
         flash("Please fill in all fields.", 'error')
         return redirect(url_for('views.home'))
     
-    # Check if category already exists
-    existing_category = BudgetCategory.query.filter_by(
-        name=category_name,
-        plan_id=plan.id
+    # Validate main category
+    valid_main_categories = ['needs', 'wants', 'investments']
+    if main_category not in valid_main_categories:
+        flash(f"Invalid main category. Must be one of: {', '.join(valid_main_categories)}", 'error')
+        return redirect(url_for('views.home'))
+    
+    # Validate category name length and characters
+    if len(category_name) < 2:
+        flash("Category name must be at least 2 characters long.", 'error')
+        return redirect(url_for('views.home'))
+    
+    if len(category_name) > 50:
+        flash("Category name must be less than 50 characters.", 'error')
+        return redirect(url_for('views.home'))
+    
+    # Check if category already exists (case-insensitive)
+    existing_category = BudgetCategory.query.filter(
+        func.lower(BudgetCategory.name) == func.lower(category_name),
+        BudgetCategory.main_category == main_category,
+        BudgetCategory.plan_id == plan.id
     ).first()
     
     if existing_category:
-        flash(f"Category '{category_name}' already exists.", 'error')
+        flash(f"Category '{category_name}' already exists in {main_category.title()}.", 'error')
         return redirect(url_for('views.home'))
     
-    # Create new category
+    # Create new category with default values
     new_category = BudgetCategory(
         name=category_name,
         main_category=main_category,
-        plan_id=plan.id
+        plan_id=plan.id,
+        assigned_amount=0.0,  # Default to 0, user can assign later
+        spent_amount=0.0
     )
     
     try:
         db.session.add(new_category)
+        
+        # Update plan preferences to include the new subcategory
+        if plan.budget_pref and 'subcategories' in plan.budget_pref:
+            # Map investments to savings for consistency
+            pref_category = 'savings' if main_category == 'investments' else main_category
+            
+            if pref_category not in plan.budget_pref['subcategories']:
+                plan.budget_pref['subcategories'][pref_category] = []
+            
+            if category_name not in plan.budget_pref['subcategories'][pref_category]:
+                plan.budget_pref['subcategories'][pref_category].append(category_name)
+                flag_modified(plan, 'budget_pref')
+        
         db.session.commit()
-        flash(f"Category '{category_name}' added successfully!", 'success')
+        flash(f"Category '{category_name}' added successfully to {main_category.title()}! You can assign a budget amount in Plan Settings.", 'success')
+        
     except Exception as e:
         db.session.rollback()
-        flash("Error adding category. Please try again.", 'error')
+        flash(f"Error adding category: {str(e)}", 'error')
     
     return redirect(url_for('views.home'))
 
@@ -1835,357 +2059,3 @@ def update_budget_form():
     
     flash(f'Successfully assigned ${new_amount:.2f} to {category_to_update.name}.', 'success')
     return redirect(url_for('views.home'))
-
-
-# ===== BANK ACCOUNT INTEGRATION =====
-
-@views.route('/bank_accounts')
-@login_required
-def bank_accounts():
-    """Bank Account Management page"""
-    plan = current_user.active_plan
-    bank_accounts = BankAccount.query.filter_by(plan_id=plan.id, is_active=True).all()
-    return render_template('bank_accounts.html', bank_accounts=bank_accounts)
-
-
-@views.route('/api/bank_accounts/link', methods=['POST'])
-@login_required
-def link_bank_account():
-    """Link a new bank account"""
-    try:
-        data = request.get_json()
-        bank_name = data.get('bank_name')
-        account_number = data.get('account_number')
-        account_name = data.get('account_name')
-        nickname = data.get('nickname', '')
-        
-        if not all([bank_name, account_number, account_name]):
-            return jsonify({'success': False, 'message': 'All required fields must be filled'})
-        
-        # Validate supported banks
-        supported_banks = ['Kasikorn Bank']
-        if bank_name not in supported_banks:
-            return jsonify({'success': False, 'message': 'Bank not supported'})
-        
-        # Check if account already exists
-        existing_account = BankAccount.query.filter_by(
-            account_number=account_number,
-            plan_id=current_user.active_plan.id
-        ).first()
-        
-        if existing_account:
-            return jsonify({'success': False, 'message': 'This account is already linked'})
-        
-        # Create new bank account
-        new_account = BankAccount(
-            bank_name=bank_name,
-            account_number=account_number,
-            account_name=account_name,
-            nickname=nickname,
-            plan_id=current_user.active_plan.id
-        )
-        
-        db.session.add(new_account)
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': f'{bank_name} account linked successfully!',
-            'account_id': new_account.id
-        })
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'message': f'Error linking account: {str(e)}'})
-
-
-@views.route('/api/bank_accounts/<int:account_id>/sync', methods=['POST'])
-@login_required
-def sync_bank_account(account_id):
-    """Sync transactions from Kasikorn Bank account"""
-    try:
-        # Get the bank account
-        bank_account = BankAccount.query.filter_by(
-            id=account_id,
-            plan_id=current_user.active_plan.id
-        ).first()
-        
-        if not bank_account:
-            return jsonify({'success': False, 'message': 'Bank account not found'})
-        
-        # Bank-specific sync logic
-        if bank_account.bank_name == "Kasikorn Bank":
-            result = sync_kbank_account(account_id)
-            return jsonify(result)
-        else:
-            return jsonify({'success': False, 'message': 'Unsupported bank'})
-        
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Error syncing account: {str(e)}'})
-
-
-def parse_transaction_notes_with_ai(user_notes, amount):
-    """Use AI to parse user notes and extract payee and category information"""
-    try:
-        from openai import OpenAI
-        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-        
-        # Get existing subcategories for context
-        existing_subcategories = get_existing_subcategories_for_ai(current_user.active_plan_id)
-        
-        prompt = f"""
-        Analyze this payment note and extract payee and category information:
-        
-        Payment Note: "{user_notes}"
-        Amount: ฿{amount}
-        
-        EXISTING SUBCATEGORIES in the user's budget:
-        {existing_subcategories}
-        
-        Extract:
-        1. **Payee Name**: The person/business being paid (e.g., "Bike taxi driver", "Som tam vendor", "7-Eleven")
-        2. **Main Category**: Needs, Wants, or Investments
-        3. **Subcategory**: Match existing ones or suggest new specific subcategory
-        
-        Examples:
-        - "Bike taxi - Transportation" → Payee: "Bike Taxi", Category: "Needs", Subcategory: "Transportation"
-        - "Som tam vendor - Food" → Payee: "Som Tam Vendor", Category: "Wants", Subcategory: "Street Food"
-        - "7-Eleven - Snacks" → Payee: "7-Eleven", Category: "Wants", Subcategory: "Convenience Store"
-        
-        Respond ONLY with JSON:
-        {{
-            "payee": "Extracted payee name",
-            "main_category": "Needs/Wants/Investments",
-            "subcategory": "Specific subcategory",
-            "subcategory_exists": true/false,
-            "confidence": "high/medium/low"
-        }}
-        """
-        
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=200,
-            temperature=0.1
-        )
-        
-        ai_response = response.choices[0].message.content.strip()
-        
-        # Parse JSON response
-        import json
-        import re
-        
-        json_match = re.search(r'\{.*\}', ai_response, re.DOTALL)
-        if json_match:
-            parsed_data = json.loads(json_match.group())
-        else:
-            parsed_data = json.loads(ai_response)
-        
-        return {
-            'payee': parsed_data.get('payee', 'Unknown Payee'),
-            'main_category': parsed_data.get('main_category', 'wants').lower(),
-            'subcategory': parsed_data.get('subcategory', 'General'),
-            'subcategory_exists': parsed_data.get('subcategory_exists', False),
-            'confidence': parsed_data.get('confidence', 'medium')
-        }
-        
-    except Exception as e:
-        print(f"DEBUG: Error parsing notes with AI: {e}")
-        # Fallback to basic parsing
-        return parse_notes_basic(user_notes)
-
-
-def parse_notes_basic(user_notes):
-    """Basic fallback parsing for transaction notes"""
-    # Simple parsing logic
-    parts = user_notes.split(' - ')
-    
-    if len(parts) >= 2:
-        payee = parts[0].strip()
-        purpose = parts[1].strip().lower()
-        
-        # Basic category mapping
-        if any(word in purpose for word in ['food', 'restaurant', 'coffee', 'snack']):
-            return {'payee': payee, 'main_category': 'wants', 'subcategory': 'Dining Out', 'subcategory_exists': False, 'confidence': 'low'}
-        elif any(word in purpose for word in ['transport', 'taxi', 'bus', 'train']):
-            return {'payee': payee, 'main_category': 'needs', 'subcategory': 'Transportation', 'subcategory_exists': False, 'confidence': 'low'}
-        else:
-            return {'payee': payee, 'main_category': 'wants', 'subcategory': 'General', 'subcategory_exists': False, 'confidence': 'low'}
-    
-    return {'payee': user_notes, 'main_category': 'wants', 'subcategory': 'General', 'subcategory_exists': False, 'confidence': 'low'}
-
-
-def create_unassigned_transaction(amount, description, transaction_date, bank_account, bank_reference):
-    """Create an unassigned transaction for manual review"""
-    # Find or create "Unassigned" category
-    unassigned_category = BudgetCategory.query.filter_by(
-        name="Unassigned",
-        main_category="wants",
-        plan_id=bank_account.plan_id
-    ).first()
-    
-    if not unassigned_category:
-        unassigned_category = BudgetCategory(
-            name="Unassigned",
-            main_category="wants",
-            plan_id=bank_account.plan_id,
-            assigned_amount=0.0,
-            spent_amount=0.0
-        )
-        db.session.add(unassigned_category)
-        db.session.flush()
-    
-    # Create transaction
-    new_transaction = Transaction(
-        amount=-amount,
-        description=f"Bank: {description}",
-        transaction_date=transaction_date,
-        category_id=unassigned_category.id,
-        plan_id=bank_account.plan_id,
-        source_type='bank',
-        bank_reference=bank_reference,
-        user_notes="No notes provided - requires manual categorization",
-        bank_account_id=bank_account.id
-    )
-    
-    db.session.add(new_transaction)
-    return new_transaction
-
-# Kasikorn Bank OAuth Routes
-@views.route('/auth/kbank')
-@login_required
-def kbank_auth():
-    """Initiate Kasikorn Bank OAuth authentication via Finverse"""
-    try:
-        api = KBankAPI()
-        
-        # Generate state parameter for security
-        state = f"user_{current_user.id}_plan_{current_user.active_plan.id}"
-        
-        # Get authorization URL
-        auth_url = api.get_authorization_url(state=state)
-        
-        if not auth_url:
-            flash('Kasikorn Bank API not configured. Please check API credentials.', 'error')
-            return redirect(url_for('views.bank_accounts'))
-        
-        # Redirect user to Kasikorn Bank for authentication
-        return redirect(auth_url)
-        
-    except Exception as e:
-        flash(f'Error initiating Kasikorn Bank authentication: {str(e)}', 'error')
-        return redirect(url_for('views.bank_accounts'))
-
-
-@views.route('/auth/kbank/callback')
-def kbank_callback():
-    """Handle Kasikorn Bank OAuth callback"""
-    try:
-        # Check if user is logged in
-        if not current_user.is_authenticated:
-            flash('Please log in to link your bank account.', 'error')
-            return redirect(url_for('auth.login'))
-        
-        # Get authorization code from callback
-        code = request.args.get('code')
-        state = request.args.get('state')
-        error = request.args.get('error')
-        
-        if error:
-            flash(f'Kasikorn Bank authentication failed: {error}', 'error')
-            return redirect(url_for('views.bank_accounts'))
-        
-        if not code:
-            flash('No authorization code received from Kasikorn Bank', 'error')
-            return redirect(url_for('views.bank_accounts'))
-        
-        # In demo mode, skip state verification
-        if code != 'demo_auth_code':
-            # Verify state parameter for real OAuth
-            expected_state = f"user_{current_user.id}_plan_{current_user.active_plan.id}"
-            if state != expected_state:
-                flash('Invalid state parameter. Authentication failed.', 'error')
-                return redirect(url_for('views.bank_accounts'))
-        
-        # Exchange code for access token
-        api = KBankAPI()
-        token_data = api.exchange_code_for_token(code)
-        
-        if not token_data:
-            flash('Failed to obtain access token from Kasikorn Bank', 'error')
-            return redirect(url_for('views.bank_accounts'))
-        
-        # Get user's bank accounts from API
-        accounts_data = api.get_accounts(token_data['access_token'])
-        
-        if not accounts_data:
-            flash('Failed to retrieve account information from Kasikorn Bank', 'error')
-            return redirect(url_for('views.bank_accounts'))
-        
-        # Process and save bank accounts
-        new_accounts = 0
-        for account_data in accounts_data.get('accounts', []):
-            # Check if account already exists
-            existing = BankAccount.query.filter_by(
-                account_number=account_data['account_number'],
-                plan_id=current_user.active_plan.id
-            ).first()
-            
-            if not existing:
-                # Encrypt and store API tokens
-                encrypted_token = api.encrypt_token(token_data)
-                
-                # Create new bank account record
-                bank_account = BankAccount(
-                    bank_name="Kasikorn Bank",
-                    account_number=account_data['account_number'],
-                    account_holder_name=account_data.get('account_name', 'Account Holder'),
-                    nickname=f"BBL {account_data['account_number'][-4:]}",
-                    api_token_encrypted=encrypted_token,
-                    is_active=True,
-                    plan_id=current_user.active_plan.id
-                )
-                
-                db.session.add(bank_account)
-                new_accounts += 1
-        
-        db.session.commit()
-        
-        if new_accounts > 0:
-            flash(f'Successfully linked {new_accounts} Kasikorn Bank account(s)!', 'success')
-        else:
-            flash('Kasikorn Bank accounts already linked', 'info')
-        
-        return redirect(url_for('views.bank_accounts'))
-        
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error processing Kasikorn Bank authentication: {str(e)}', 'error')
-        return redirect(url_for('views.bank_accounts'))
-
-
-@views.route('/api/bank_accounts/<int:account_id>', methods=['DELETE'])
-@login_required
-def remove_bank_account(account_id):
-    """Remove/deactivate a bank account"""
-    try:
-        account = BankAccount.query.filter_by(
-            id=account_id,
-            plan_id=current_user.active_plan.id
-        ).first()
-        
-        if not account:
-            return jsonify({'success': False, 'message': 'Bank account not found'})
-        
-        # Deactivate instead of deleting to preserve transaction history
-        account.is_active = False
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Bank account removed successfully'
-        })
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'message': f'Error removing account: {str(e)}'})

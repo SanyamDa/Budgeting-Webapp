@@ -98,38 +98,15 @@ class Transaction(db.Model):
     plan_id = db.Column(db.Integer, db.ForeignKey('plan.id'), nullable=False)
     created_date = db.Column(db.DateTime(timezone=True), default=func.now())
     
-    # Bank integration fields
-    source_type = db.Column(db.String(20), default='manual')  # 'manual', 'receipt', 'bank'
-    bank_reference = db.Column(db.String(100), nullable=True)  # Bank transaction ID
+    # Transaction source
+    source_type = db.Column(db.String(20), default='manual')  # 'manual', 'receipt'
     user_notes = db.Column(db.Text, nullable=True)  # User's payment notes for categorization
-    bank_account_id = db.Column(db.Integer, db.ForeignKey('bank_account.id'), nullable=True)
+
     
     # Relationships
     plan = db.relationship('Plan', backref=db.backref('transactions', lazy=True, cascade="all, delete-orphan"))
     payee = db.relationship('Payee', backref=db.backref('transactions', lazy=True))
-    bank_account = db.relationship('BankAccount', backref=db.backref('transactions', lazy=True))
 
-
-class BankAccount(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    bank_name = db.Column(db.String(50), nullable=False)  # 'Bangkok Bank', 'Kasikorn Bank', 'Krungsiri Bank'
-    account_number = db.Column(db.String(20), nullable=False)  # Masked for security
-    account_name = db.Column(db.String(100), nullable=False)  # Account holder name
-    nickname = db.Column(db.String(50), nullable=True)  # User-friendly name like "Main Account"
-    is_active = db.Column(db.Boolean, default=True)
-    last_sync = db.Column(db.DateTime(timezone=True), nullable=True)
-    plan_id = db.Column(db.Integer, db.ForeignKey('plan.id'), nullable=False)
-    created_date = db.Column(db.DateTime(timezone=True), default=func.now())
-    
-    # API credentials (encrypted)
-    api_token = db.Column(db.Text, nullable=True)  # Encrypted bank API token
-    refresh_token = db.Column(db.Text, nullable=True)  # Encrypted refresh token
-    
-    # Relationships
-    plan = db.relationship('Plan', backref=db.backref('bank_accounts', lazy=True, cascade="all, delete-orphan"))
-    
-    def __repr__(self):
-        return f'<BankAccount {self.bank_name} - {self.account_number[-4:]}>'  # Show last 4 digits only
 
 
 # User model updated for multi-plan support
