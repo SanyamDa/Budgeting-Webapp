@@ -25,7 +25,7 @@ google = oauth.register(
 @auth.route("/login/google")
 def google_login():
     session.clear()                               # keep this
-    redirect_uri = url_for("auth.google_callback", _external=True)
+    redirect_uri = "https://api.sanyamdababy.hackclub.app/auth/callback"
 
     # tell Google: “make the user pick an account every time”
     return google.authorize_redirect(
