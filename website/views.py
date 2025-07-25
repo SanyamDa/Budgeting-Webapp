@@ -288,7 +288,8 @@ def home(year=None, month=None):
         }
     
     money_to_be_assigned = plan.monthly_income + rollover_amount
-    available_amount = money_to_be_assigned - total_assigned
+    unassigned_amount = money_to_be_assigned - total_assigned  # Money Remaining (unassigned)
+    total_available_in_categories = sum(category_totals[main_cat]['available'] for main_cat in category_totals)
 
     all_categories = sorted([cat for cat in categories if cat.spent_amount > 0], key=lambda x: x.spent_amount, reverse=True)
     top_spending_categories = all_categories[:5]
@@ -325,7 +326,8 @@ def home(year=None, month=None):
                          # Summary data
                          total_assigned=total_assigned,
                          total_spent=total_spent,
-                         available_amount=available_amount,
+                         available_amount=total_available_in_categories,  # Sum of available in categories
+                         unassigned_amount=unassigned_amount,  # Money Remaining (unassigned)
                          rollover_amount=rollover_amount,
                          money_to_be_assigned=money_to_be_assigned,
                          top_spending_categories=top_spending_categories)
