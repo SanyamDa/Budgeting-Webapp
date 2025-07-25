@@ -225,7 +225,15 @@ def home(year=None, month=None):
             if prev_month_budgets:
                 total_assigned_prev = sum(mb.assigned_amount for mb in prev_month_budgets)
                 total_spent_prev = sum(mb.spent_amount for mb in prev_month_budgets)
-                leftover = total_assigned_prev - total_spent_prev
+                # Calculate available from categories (assigned - spent)
+                leftover_from_categories = total_assigned_prev - total_spent_prev
+                
+                # Calculate unassigned money remaining from previous month
+                prev_month_income = plan.monthly_income  # Assuming income was same
+                unassigned_money_prev = prev_month_income - total_assigned_prev
+                
+                # Total leftover = available from categories + unassigned money
+                leftover = leftover_from_categories + unassigned_money_prev
                 
                 new_rollover = MonthlyRollover(
                     plan_id=plan.id, month=prev_month_int, year=prev_month_year, amount=leftover
@@ -1010,6 +1018,7 @@ def reflect():
     # Calculate monthly breakdown for trends
     monthly_breakdown = []
     daily_spending_data = []
+    daily_spending_by_category = {'needs': [], 'wants': [], 'investments': []}
     
     if sorted_months:
         month_totals = {}
