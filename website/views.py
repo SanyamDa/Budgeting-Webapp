@@ -216,33 +216,12 @@ def home(year=None, month=None):
             plan_id=plan.id, month=prev_month_int, year=prev_month_year
         ).first()
 
-        # If no record, calculate it
-        if not rollover_from_last_month:
-            prev_month_budgets = MonthlyBudget.query.filter_by(
-                plan_id=plan.id, month=prev_month_int, year=prev_month_year
-            ).all()
-            
-            if prev_month_budgets:
-                total_assigned_prev = sum(mb.assigned_amount for mb in prev_month_budgets)
-                total_spent_prev = sum(mb.spent_amount for mb in prev_month_budgets)
-                # Calculate available from categories (assigned - spent)
-                leftover_from_categories = total_assigned_prev - total_spent_prev
-                
-                # Calculate unassigned money remaining from previous month
-                prev_month_income = plan.monthly_income  # Assuming income was same
-                unassigned_money_prev = prev_month_income - total_assigned_prev
-                
-                # Total leftover = available from categories + unassigned money
-                leftover = leftover_from_categories + unassigned_money_prev
-                
-                new_rollover = MonthlyRollover(
-                    plan_id=plan.id, month=prev_month_int, year=prev_month_year, amount=leftover
-                )
-                db.session.add(new_rollover)
-                db.session.commit()
-                rollover_amount = leftover
-        else:
+        if rollover_from_last_month:
             rollover_amount = rollover_from_last_month.amount
+        else:
+            # If no rollover record exists, start with 0 for this month
+            # The rollover will be created when this month's leftover is calculated
+            rollover_amount = 0.0
 
     # --- Budget Processing for Display Month ---
     categories = BudgetCategory.query.filter_by(plan_id=plan.id).all()
@@ -287,9 +266,38 @@ def home(year=None, month=None):
             'available': sum(c.available_amount for c in cats)
         }
     
-    money_to_be_assigned = plan.monthly_income + rollover_amount
-    unassigned_amount = money_to_be_assigned - total_assigned  # Money Remaining (unassigned)
-    total_available_in_categories = sum(category_totals[main_cat]['available'] for main_cat in category_totals)
+    # Follow user's calculation rules:
+    # Assigned in Month = amount assigned to all subcategories
+    assigned_in_month = total_assigned
+    
+    # Activity = total activity in all categories and subcategories
+    activity = total_spent
+    
+    # Available = assigned_in_month - activity
+    available = assigned_in_month - activity
+    
+    # Money Remaining to Assign = monthly_income - assigned_total (NOT including rollover)
+    money_remaining_to_assign = (plan.monthly_income + rollover_amount) - total_assigned
+    
+    # Leftover for the month = money_remaining_to_assign + available
+    leftover_for_month = money_remaining_to_assign + available
+    
+    # Save current month's leftover as rollover for future months
+    existing_rollover = MonthlyRollover.query.filter_by(
+        plan_id=plan.id, month=month, year=year
+    ).first()
+    
+    if existing_rollover:
+        # Update existing rollover record
+        existing_rollover.amount = leftover_for_month
+    else:
+        # Create new rollover record
+        new_rollover = MonthlyRollover(
+            plan_id=plan.id, month=month, year=year, amount=leftover_for_month
+        )
+        db.session.add(new_rollover)
+    
+    db.session.commit()
 
     all_categories = sorted([cat for cat in categories if cat.spent_amount > 0], key=lambda x: x.spent_amount, reverse=True)
     top_spending_categories = all_categories[:5]
@@ -323,13 +331,13 @@ def home(year=None, month=None):
                          is_first_month=is_first_month,
                          can_go_prev=can_go_prev,
                          can_go_next=can_go_next,
-                         # Summary data
-                         total_assigned=total_assigned,
-                         total_spent=total_spent,
-                         available_amount=total_available_in_categories,  # Sum of available in categories
-                         unassigned_amount=unassigned_amount,  # Money Remaining (unassigned)
+                         # Summary data (following user's calculation rules)
+                         total_assigned=assigned_in_month,  # Assigned in Month
+                         total_spent=activity,  # Activity
+                         available_amount=available,  # Available = assigned_in_month - activity
+                         money_remaining_to_assign=money_remaining_to_assign,  # Money Remaining to Assign
+                         leftover_for_month=leftover_for_month,  # Leftover for the month
                          rollover_amount=rollover_amount,
-                         money_to_be_assigned=money_to_be_assigned,
                          top_spending_categories=top_spending_categories)
 
 
