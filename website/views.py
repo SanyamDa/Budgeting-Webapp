@@ -211,41 +211,38 @@ def home(year=None, month=None):
     
     # Check if the display month is after the user's join month before calculating rollover
     if not is_first_month:
-        # Always recalculate rollover based on current data
-        prev_month_budgets = MonthlyBudget.query.filter_by(
+        # Try to find an existing rollover record
+        rollover_from_last_month = MonthlyRollover.query.filter_by(
             plan_id=plan.id, month=prev_month_int, year=prev_month_year
-        ).all()
-        
-        if prev_month_budgets:
-            total_assigned_prev = sum(mb.assigned_amount for mb in prev_month_budgets)
-            total_spent_prev = sum(mb.spent_amount for mb in prev_month_budgets)
-            # Calculate available from categories (assigned - spent)
-            leftover_from_categories = total_assigned_prev - total_spent_prev
-            
-            # Calculate unassigned money remaining from previous month
-            prev_month_income = plan.monthly_income  # Assuming income was same
-            unassigned_money_prev = prev_month_income - total_assigned_prev
-            
-            # Total leftover = available from categories + unassigned money
-            leftover = leftover_from_categories + unassigned_money_prev
-            
-            # Try to find an existing rollover record
-            rollover_from_last_month = MonthlyRollover.query.filter_by(
+        ).first()
+
+        # If no record, calculate it
+        if not rollover_from_last_month:
+            prev_month_budgets = MonthlyBudget.query.filter_by(
                 plan_id=plan.id, month=prev_month_int, year=prev_month_year
-            ).first()
+            ).all()
             
-            if rollover_from_last_month:
-                # Update existing record with recalculated amount
-                rollover_from_last_month.amount = leftover
-            else:
-                # Create new record
+            if prev_month_budgets:
+                total_assigned_prev = sum(mb.assigned_amount for mb in prev_month_budgets)
+                total_spent_prev = sum(mb.spent_amount for mb in prev_month_budgets)
+                # Calculate available from categories (assigned - spent)
+                leftover_from_categories = total_assigned_prev - total_spent_prev
+                
+                # Calculate unassigned money remaining from previous month
+                prev_month_income = plan.monthly_income  # Assuming income was same
+                unassigned_money_prev = prev_month_income - total_assigned_prev
+                
+                # Total leftover = available from categories + unassigned money
+                leftover = leftover_from_categories + unassigned_money_prev
+                
                 new_rollover = MonthlyRollover(
                     plan_id=plan.id, month=prev_month_int, year=prev_month_year, amount=leftover
                 )
                 db.session.add(new_rollover)
-            
-            db.session.commit()
-            rollover_amount = leftover
+                db.session.commit()
+                rollover_amount = leftover
+        else:
+            rollover_amount = rollover_from_last_month.amount
 
     # --- Budget Processing for Display Month ---
     categories = BudgetCategory.query.filter_by(plan_id=plan.id).all()
