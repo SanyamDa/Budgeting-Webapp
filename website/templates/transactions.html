@@ -4,7 +4,24 @@
 
 {% block content %}
 <div class="container-fluid mt-4">
-    <h3 class="page-title mb-4">All Transactions</h3>
+    <!-- Month Selector -->
+    <div class="top-bar">
+        <div class="month-selector">
+            {% if can_go_prev %}
+                <a href="{{ url_for('views.transactions', year=prev_year, month=prev_month) }}" class="btn btn-nav"><i class='bx bx-chevron-left'></i></a>
+            {% else %}
+                <span class="btn btn-nav disabled"><i class='bx bx-chevron-left'></i></span>
+            {% endif %}
+            <span class="current-month">{{ current_month }} {{ current_year }}</span>
+            {% if can_go_next %}
+                <a href="{{ url_for('views.transactions', year=next_year, month=next_month) }}" class="btn btn-nav"><i class='bx bx-chevron-right'></i></a>
+            {% else %}
+                <span class="btn btn-nav disabled"><i class='bx bx-chevron-right'></i></span>
+            {% endif %}
+        </div>
+    </div>
+    
+    <h3 class="page-title mb-4">{{ current_month }} {{ current_year }} Transactions</h3>
 
     <!-- Balances summary -->
     <div class="card glass p-4 d-flex flex-row align-items-center justify-content-center balances-display mb-5">

@@ -593,6 +593,16 @@ def add_transaction():
         description = data.get('description', 'Transaction')
         payee_id = data.get('payee_id')
         
+        # Get transaction date from request, default to current date if not provided
+        transaction_date_str = data.get('transaction_date')
+        if transaction_date_str:
+            try:
+                transaction_date = datetime.strptime(transaction_date_str, '%Y-%m-%d')
+            except ValueError:
+                return jsonify({'success': False, 'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
+        else:
+            transaction_date = datetime.now()
+        
         # Comprehensive transaction validation
         is_valid, error_msg = validate_transaction_data(amount, description, category_id, current_user.active_plan.id)
         if not is_valid:
@@ -633,7 +643,8 @@ def add_transaction():
             amount=-abs(amount),  # Make negative for expenses
             category_id=category_id,
             payee_id=payee_id,
-            plan_id=current_user.active_plan.id
+            plan_id=current_user.active_plan.id,
+            transaction_date=transaction_date
         )
         
         db.session.add(transaction)
@@ -866,9 +877,10 @@ def set_transaction_payee(tx_id):
 
 
 # --------------------------- Transactions Page ---------------------------
+@views.route('/transactions/<int:year>/<int:month>')
 @views.route('/transactions')
 @login_required
-def transactions():
+def transactions(year=None, month=None):
     """Display the transactions summary page (placeholder until table implemented)."""
     # Ensure the user has an active plan
     plan = current_user.active_plan
@@ -879,9 +891,23 @@ def transactions():
     # Calculate Monthly Allowance (income)
     monthly_allowance = plan.monthly_income or 0.0
 
-    # Determine current month/year
-    today = datetime.now()
-    start_of_month = datetime(today.year, today.month, 1)
+    # Determine the date to display
+    if year is None or month is None:
+        today = datetime.now()
+        year, month = today.year, today.month
+    
+    try:
+        display_date = datetime(year, month, 1)
+    except ValueError:
+        # Handle invalid month/year in URL
+        today = datetime.now()
+        year, month = today.year, today.month
+        display_date = datetime(year, month, 1)
+
+    display_month_str = display_date.strftime('%B')
+    
+    # Calculate month boundaries
+    start_of_month = datetime(year, month, 1)
     end_of_month = start_of_month + timedelta(days=32)
     end_of_month = datetime(end_of_month.year, end_of_month.month, 1)
 
@@ -895,6 +921,17 @@ def transactions():
     activity_total = abs(activity_sum)  # Convert to positive value for display
 
     available = monthly_allowance - activity_total
+    
+    # Navigation variables
+    from dateutil.relativedelta import relativedelta
+    prev_month_date = display_date - relativedelta(months=1)
+    next_month_date = display_date + relativedelta(months=1)
+    
+    # Check if navigation should be enabled
+    user_join_date = current_user.date_created or datetime.now()
+    is_first_month = (display_date.year == user_join_date.year and display_date.month == user_join_date.month)
+    can_go_prev = not is_first_month
+    can_go_next = True  # Allow future months for transaction entry
 
     return render_template(
         'transactions.html',
@@ -906,21 +943,55 @@ def transactions():
             Transaction.transaction_date>=start_of_month,
             Transaction.transaction_date<end_of_month
         ).order_by(Transaction.transaction_date.desc()).all(),
-        payees=[{'id': p.id, 'name': p.name} for p in plan.payees]
+        payees=[{'id': p.id, 'name': p.name} for p in plan.payees],
+        # Month navigation data
+        current_month=display_month_str,
+        current_month_num=month,
+        current_year=year,
+        prev_month=prev_month_date.month,
+        prev_year=prev_month_date.year,
+        next_month=next_month_date.month,
+        next_year=next_month_date.year,
+        can_go_prev=can_go_prev,
+        can_go_next=can_go_next
     )
 
 
 # --------------------------- Reflect Page ---------------------------
+@views.route('/reflect/<int:year>/<int:month>')
 @views.route('/reflect')
 @login_required
-def reflect():
+def reflect(year=None, month=None):
     plan = current_user.active_plan
     if not plan:
         flash("No active plan found.", 'error')
         return redirect(url_for('views.home'))
     
+    # Determine the date to display
+    if year is None or month is None:
+        today = datetime.now()
+        year, month = today.year, today.month
+    
+    try:
+        display_date = datetime(year, month, 1)
+    except ValueError:
+        # Handle invalid month/year in URL
+        today = datetime.now()
+        year, month = today.year, today.month
+        display_date = datetime(year, month, 1)
+
+    display_month_str = display_date.strftime('%B')
+    
+    # Calculate month boundaries for filtering transactions
+    start_of_month = datetime(year, month, 1)
+    end_of_month = start_of_month + timedelta(days=32)
+    end_of_month = datetime(end_of_month.year, end_of_month.month, 1)
+    
+    # Get transactions for the selected month
     transactions = db.session.query(Transaction).filter(
-        Transaction.plan_id == plan.id
+        Transaction.plan_id == plan.id,
+        Transaction.transaction_date >= start_of_month,
+        Transaction.transaction_date < end_of_month
     ).order_by(Transaction.transaction_date.desc()).all()
     
     # Get unique months with data
@@ -1119,6 +1190,17 @@ def reflect():
                     'amount': category_daily_totals.get(day, 0)
                 })
     
+    # Navigation variables
+    from dateutil.relativedelta import relativedelta
+    prev_month_date = display_date - relativedelta(months=1)
+    next_month_date = display_date + relativedelta(months=1)
+    
+    # Check if navigation should be enabled
+    user_join_date = current_user.date_created or datetime.now()
+    is_first_month = (display_date.year == user_join_date.year and display_date.month == user_join_date.month)
+    can_go_prev = not is_first_month
+    can_go_next = True  # Allow future months for analysis
+    
     return render_template('reflect.html', 
                          month_options=month_options,
                          current_month=current_month,
@@ -1128,7 +1210,17 @@ def reflect():
                          summary_stats=summary_stats,
                          monthly_breakdown=monthly_breakdown,
                          daily_spending_data=daily_spending_data,
-                         daily_spending_by_category=daily_spending_by_category)
+                         daily_spending_by_category=daily_spending_by_category,
+                         # Month navigation data
+                         current_month_display=display_month_str,
+                         current_month_num=month,
+                         current_year=year,
+                         prev_month=prev_month_date.month,
+                         prev_year=prev_month_date.year,
+                         next_month=next_month_date.month,
+                         next_year=next_month_date.year,
+                         can_go_prev=can_go_prev,
+                         can_go_next=can_go_next)
 
 
 @views.route('/receipt_ai')

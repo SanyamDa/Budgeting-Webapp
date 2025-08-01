@@ -200,7 +200,8 @@ document.addEventListener('DOMContentLoaded', () => {
         description,
         amount,
         category_id: categoryId,
-        payee_id: payeeId
+        payee_id: payeeId,
+        transaction_date: date
       });
 
       if (res.success) {
