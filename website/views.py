@@ -322,6 +322,7 @@ def home(year=None, month=None):
                          categories=organized_categories,
                          category_totals=category_totals,
                          current_month=display_month_str,
+                         current_month_num=month,
                          current_year=year,
                          # For navigation
                          prev_month=prev_month_date.month,
@@ -381,7 +382,18 @@ def update_category_amount():
         print(f"Request headers: {dict(request.headers)}")  # Debug: check content type
         category_id = data.get('category_id')
         new_amount = float(data.get('amount', 0))
+        
+        # Get month and year from request, default to current month if not provided
+        target_month = data.get('month')
+        target_year = data.get('year')
+        
+        if target_month is None or target_year is None:
+            current_date = datetime.now()
+            target_month = target_month or current_date.month
+            target_year = target_year or current_date.year
+        
         print(f"Extracted category_id: {category_id}, type: {type(category_id)}")  # Debug
+        print(f"Target month: {target_month}, Target year: {target_year}")  # Debug
         
         # Convert category_id to integer if it's a string
         if category_id is not None:
@@ -445,11 +457,6 @@ def update_category_amount():
         # Calculate the maximum allowed amount based on the ratio
         max_allowed = plan.monthly_income * category_ratio if plan.monthly_income else 0
         
-        # Get current total assigned to this main category
-        current_date = datetime.now()
-        current_month = current_date.month
-        current_year = current_date.year
-        
         # Get current total assigned to this main category from MonthlyBudget records
         current_total = 0
         for c in plan.categories:
@@ -457,8 +464,8 @@ def update_category_amount():
                 mb = MonthlyBudget.query.filter_by(
                     plan_id=plan.id, 
                     category_id=c.id, 
-                    month=current_month, 
-                    year=current_year
+                    month=target_month, 
+                    year=target_year
                 ).first()
                 if mb:
                     current_total += mb.assigned_amount
@@ -474,25 +481,20 @@ def update_category_amount():
             )
             return jsonify({'success': False, 'error': error_msg}), 400
         # Update the category amount
-        # Get current month and year
-        current_date = datetime.now()
-        current_month = current_date.month
-        current_year = current_date.year
-        
-        # Find or create MonthlyBudget record for this category and month
+        # Find or create MonthlyBudget record for this category and target month
         monthly_budget = MonthlyBudget.query.filter_by(
             plan_id=plan.id, 
             category_id=category_id, 
-            month=current_month, 
-            year=current_year
+            month=target_month, 
+            year=target_year
         ).first()
         
         if not monthly_budget:
             monthly_budget = MonthlyBudget(
                 plan_id=plan.id,
                 category_id=category_id,
-                month=current_month,
-                year=current_year,
+                month=target_month,
+                year=target_year,
                 assigned_amount=new_amount,
                 spent_amount=0
             )
@@ -1978,9 +1980,22 @@ def update_budget_form():
     category_id = request.form.get('category_id')
     new_amount = request.form.get('amount')
     
+    # Get month and year from form, default to current month if not provided
+    target_month = request.form.get('month')
+    target_year = request.form.get('year')
+    
     try:
         category_id = int(category_id)
         new_amount = float(new_amount)
+        
+        if target_month is None or target_year is None:
+            current_date = datetime.now()
+            target_month = int(target_month) if target_month else current_date.month
+            target_year = int(target_year) if target_year else current_date.year
+        else:
+            target_month = int(target_month)
+            target_year = int(target_year)
+            
     except (ValueError, TypeError):
         flash('Invalid input values.', 'error')
         return redirect(url_for('views.home'))
@@ -2013,10 +2028,6 @@ def update_budget_form():
     max_allowed = plan.monthly_income * category_ratio if plan.monthly_income else 0
     
     # Calculate current total for this main category (excluding the category being updated)
-    current_date = datetime.now()
-    current_month = current_date.month
-    current_year = current_date.year
-    
     current_total_others = 0
     current_category_amount = 0
     
@@ -2025,8 +2036,8 @@ def update_budget_form():
             mb = MonthlyBudget.query.filter_by(
                 plan_id=plan.id, 
                 category_id=c.id, 
-                month=current_month, 
-                year=current_year
+                month=target_month, 
+                year=target_year
             ).first()
             if mb:
                 if c.id == category_id:
@@ -2057,8 +2068,8 @@ def update_budget_form():
     mb = MonthlyBudget.query.filter_by(
         plan_id=plan.id, 
         category_id=category_id, 
-        month=current_month, 
-        year=current_year
+        month=target_month, 
+        year=target_year
     ).first()
     
     if mb:
@@ -2067,8 +2078,8 @@ def update_budget_form():
         mb = MonthlyBudget(
             plan_id=plan.id, 
             category_id=category_id, 
-            month=current_month, 
-            year=current_year, 
+            month=target_month, 
+            year=target_year, 
             assigned_amount=new_amount, 
             spent_amount=0
         )
