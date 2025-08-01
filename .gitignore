@@ -1,10 +1,11 @@
-.env
-.env
-.env
-.env
-.venv/
+
+*.pyc
+
 __pycache__/
-eval "$(ssh-agent -s)"*
-/website/__pycache__
-/website/__pycache__
-website/__pycache__/views.cpython-313.pyc
+
+.venv/
+
+website/database.db
+
+.env
+
