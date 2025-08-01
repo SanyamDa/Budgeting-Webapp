@@ -92,7 +92,7 @@ class Transaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.String(200), nullable=False)
     amount = db.Column(db.Float, nullable=False)
-    transaction_date = db.Column(db.DateTime(timezone=True), default=func.now())
+    transaction_date = db.Column(db.DateTime, nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('budget_category.id'), nullable=False)
     payee_id = db.Column(db.Integer, db.ForeignKey('payee.id'), nullable=True)
     plan_id = db.Column(db.Integer, db.ForeignKey('plan.id'), nullable=False)

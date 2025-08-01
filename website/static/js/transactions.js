@@ -142,9 +142,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const payeeSelect = document.getElementById('transactionPayee');
   const dateInput = document.getElementById('transactionDate');
 
-  // Set default date to today
+  // Set default date to today (only if no date is already set)
   const today = new Date().toISOString().split('T')[0];
-  dateInput.value = today;
+  if (!dateInput.value) {
+    dateInput.value = today;
+  }
 
   // Load categories when modal opens
   addTransactionModal.on('show.bs.modal', async () => {
@@ -207,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (res.success) {
         addTransactionModal.modal('hide');
         transactionForm.reset();
-        dateInput.value = today; // Reset to today
+        // Don't automatically reset date - let user choose
         
         // Reload the page to show the new transaction
         window.location.reload();

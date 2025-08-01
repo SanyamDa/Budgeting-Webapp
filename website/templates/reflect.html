@@ -42,15 +42,10 @@
             <div class="row">
                 <!-- Left Column - Main Content -->
                 <div class="col-lg-7">
-                    <!-- Month and Category Selection -->
+                    <!-- Category Selection -->
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h4 class="mb-0">Spending Breakdown</h4>
-                        <div class="d-flex mb-4" style="gap: 2rem;">
-                            <select class="form-select glass-select" id="monthSelector">
-                                {% for month in month_options %}
-                                <option value="{{ month.value }}" {% if month.value == current_month %}selected{% endif %}>{{ month.display }}</option>
-                                {% endfor %}
-                            </select>
+                        <div class="d-flex mb-4">
                             <select class="form-select glass-select" id="categorySelector">
                                 <option value="all">All Categories</option>
                                 <option value="needs">Needs</option>
@@ -386,19 +381,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Event listeners for dropdowns
     const categorySelector = document.getElementById('categorySelector');
-    const monthSelector = document.getElementById('monthSelector');
     
     categorySelector.addEventListener('change', function() {
         const selectedCategory = this.value;
         const filteredData = filterDataByCategory(selectedCategory);
         initializeChart(filteredData);
         updateRightPanel(selectedCategory);
-    });
-    
-    monthSelector.addEventListener('change', function() {
-        // Reload page with new month selection
-        const selectedMonth = this.value;
-        window.location.href = `/reflect?month=${selectedMonth}`;
     });
     
     // Initialize chart with all data

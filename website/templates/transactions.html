@@ -83,7 +83,7 @@
             <tbody>
                 {% for tx in transactions %}
                 <tr data-transaction-id="{{ tx.id }}">
-                    <td>{{ tx.created_date.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ tx.transaction_date.strftime('%Y-%m-%d') }}</td>
                     <td>{{ tx.category.main_category.capitalize() }}</td>
                     <td>{{ tx.category.name }}</td>
                     <td class="text-right">฿{{ "%.2f"|format(tx.amount|abs) }}</td>

@@ -595,13 +595,24 @@ def add_transaction():
         
         # Get transaction date from request, default to current date if not provided
         transaction_date_str = data.get('transaction_date')
+        print(f"DEBUG: Received transaction_date_str: '{transaction_date_str}'")  # Debug
+        
         if transaction_date_str:
             try:
-                transaction_date = datetime.strptime(transaction_date_str, '%Y-%m-%d')
-            except ValueError:
-                return jsonify({'success': False, 'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
+                # Try different date formats
+                if '/' in transaction_date_str:
+                    # Handle DD/MM/YYYY format
+                    transaction_date = datetime.strptime(transaction_date_str, '%d/%m/%Y')
+                else:
+                    # Handle YYYY-MM-DD format (HTML date input standard)
+                    transaction_date = datetime.strptime(transaction_date_str, '%Y-%m-%d')
+                print(f"DEBUG: Parsed transaction_date: {transaction_date}")  # Debug
+            except ValueError as e:
+                print(f"DEBUG: Date parsing error: {e}")  # Debug
+                return jsonify({'success': False, 'error': f'Invalid date format: {transaction_date_str}. Expected YYYY-MM-DD or DD/MM/YYYY'}), 400
         else:
             transaction_date = datetime.now()
+            print(f"DEBUG: Using current date: {transaction_date}")  # Debug
         
         # Comprehensive transaction validation
         is_valid, error_msg = validate_transaction_data(amount, description, category_id, current_user.active_plan.id)
@@ -638,17 +649,31 @@ def add_transaction():
             }), 400
         
         # Create new transaction (amount should be negative for expenses)
+        # Ensure the date is stored as a naive datetime to avoid timezone issues
+        naive_transaction_date = transaction_date.replace(tzinfo=None) if transaction_date.tzinfo else transaction_date
+        print(f"DEBUG: About to store transaction with date: {naive_transaction_date}")  # Debug
+        print(f"DEBUG: Date type: {type(naive_transaction_date)}")  # Debug
+        
         transaction = Transaction(
             description=description,
             amount=-abs(amount),  # Make negative for expenses
             category_id=category_id,
             payee_id=payee_id,
             plan_id=current_user.active_plan.id,
-            transaction_date=transaction_date
+            transaction_date=naive_transaction_date
         )
         
+        print(f"DEBUG: Transaction object created, date before save: {transaction.transaction_date}")  # Debug
+        
         db.session.add(transaction)
+        print(f"DEBUG: Transaction added to session, date: {transaction.transaction_date}")  # Debug
+        
         db.session.commit()
+        print(f"DEBUG: Transaction committed, final date: {transaction.transaction_date}")  # Debug
+        
+        # Refresh from database to see what was actually stored
+        db.session.refresh(transaction)
+        print(f"DEBUG: After refresh from DB - ID: {transaction.id}, Date: {transaction.transaction_date}")  # Debug
         
         # Update category spent amount
         spent = db.session.query(func.sum(func.abs(Transaction.amount))).filter_by(
