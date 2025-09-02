@@ -658,6 +658,9 @@ def add_transaction():
         if not category:
             return jsonify({'success': False, 'error': 'Category not found'}), 404
         
+        # Ensure the date is stored as a naive datetime to avoid timezone issues
+        naive_transaction_date = transaction_date.replace(tzinfo=None) if transaction_date.tzinfo else transaction_date
+        
         # Validate budget limit using helper function
         is_valid, error_message, validation_data = validate_budget_limit(category, amount, naive_transaction_date)
         
@@ -669,8 +672,6 @@ def add_transaction():
             }), 400
         
         # Create new transaction (amount should be negative for expenses)
-        # Ensure the date is stored as a naive datetime to avoid timezone issues
-        naive_transaction_date = transaction_date.replace(tzinfo=None) if transaction_date.tzinfo else transaction_date
         print(f"DEBUG: About to store transaction with date: {naive_transaction_date}")  # Debug
         print(f"DEBUG: Date type: {type(naive_transaction_date)}")  # Debug
         
