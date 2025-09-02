@@ -9,3 +9,11 @@ website/database.db
 
 .env
 
+
+# generated
+*.pyc
+__pycache__/
+website/database.db
+
+*.pyc
+__pycache__/

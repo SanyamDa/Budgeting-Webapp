@@ -64,4 +64,8 @@ def create_app():
         from .models import User
         return User.query.get(int(user_id))
 
+    @app.get("/health")
+    def health():
+        return {"status": "ok"}, 200
+
     return app
