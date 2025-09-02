@@ -23,23 +23,43 @@ pillow_heif.register_heif_opener()
 views = Blueprint('views', __name__)
 
 # Helper function for budget validation
-def validate_budget_limit(category, transaction_amount):
+def validate_budget_limit(category, transaction_amount, transaction_date=None):
     """
     Validate if a transaction amount would exceed the category's budget limit.
     Returns (is_valid, error_message, validation_data)
     """
     try:
-        # Calculate current spent amount
-        current_spent = db.session.query(func.sum(func.abs(Transaction.amount))).filter_by(
-            category_id=category.id
+        # Use transaction date to determine which month's budget to check
+        if transaction_date is None:
+            transaction_date = datetime.now()
+        
+        target_month = transaction_date.month
+        target_year = transaction_date.year
+        
+        # Get the monthly budget for this category and month
+        monthly_budget = MonthlyBudget.query.filter_by(
+            plan_id=category.plan_id,
+            category_id=category.id,
+            month=target_month,
+            year=target_year
+        ).first()
+        
+        # If no monthly budget exists, use 0 as assigned amount (no budget set for this month)
+        assigned_amount = monthly_budget.assigned_amount if monthly_budget else 0
+        
+        # Calculate current spent amount for this specific month
+        current_spent = db.session.query(func.sum(func.abs(Transaction.amount))).filter(
+            Transaction.category_id == category.id,
+            func.extract('month', Transaction.transaction_date) == target_month,
+            func.extract('year', Transaction.transaction_date) == target_year
         ).scalar() or 0
         
         # Check if this transaction would exceed the category limit
         new_total_spent = current_spent + transaction_amount
-        available_amount = category.assigned_amount - current_spent
+        available_amount = assigned_amount - current_spent
         
-        if new_total_spent > category.assigned_amount:
-            excess_amount = new_total_spent - category.assigned_amount
+        if new_total_spent > assigned_amount:
+            excess_amount = new_total_spent - assigned_amount
             error_message = f'Transaction exceeds budget limit for "{category.name}" category. Available: ฿{available_amount:.2f}, Requested: ฿{transaction_amount:.2f}, Excess: ฿{excess_amount:.2f}'
             
             validation_data = {
@@ -49,7 +69,7 @@ def validate_budget_limit(category, transaction_amount):
                 'excess_amount': excess_amount,
                 'category_name': category.name,
                 'current_spent': current_spent,
-                'category_limit': category.assigned_amount
+                'category_limit': assigned_amount
             }
             
             return False, error_message, validation_data
@@ -60,7 +80,7 @@ def validate_budget_limit(category, transaction_amount):
             'requested_amount': transaction_amount,
             'category_name': category.name,
             'current_spent': current_spent,
-            'category_limit': category.assigned_amount,
+            'category_limit': assigned_amount,
             'new_total_spent': new_total_spent
         }
         
@@ -639,7 +659,7 @@ def add_transaction():
             return jsonify({'success': False, 'error': 'Category not found'}), 404
         
         # Validate budget limit using helper function
-        is_valid, error_message, validation_data = validate_budget_limit(category, amount)
+        is_valid, error_message, validation_data = validate_budget_limit(category, amount, naive_transaction_date)
         
         if not is_valid:
             return jsonify({
@@ -1304,7 +1324,7 @@ def create_receipt_transaction():
             return jsonify({'success': False, 'message': 'Invalid category'})
         
         # Validate budget limit using helper function
-        is_valid, error_message, validation_data = validate_budget_limit(category, amount)
+        is_valid, error_message, validation_data = validate_budget_limit(category, amount, transaction_date)
         
         if not is_valid:
             return jsonify({
