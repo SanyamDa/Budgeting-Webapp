@@ -1,19 +1,16 @@
-
-*.pyc
-
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 
-.venv/
-
-website/database.db
-
+# Local env & secrets
 .env
 
-
-# generated
-*.pyc
-__pycache__/
-website/database.db
-
-*.pyc
-__pycache__/
+# SQLite and other local databases
+*.db
+instance/
