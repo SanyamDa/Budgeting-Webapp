@@ -457,20 +457,24 @@ def update_category_amount():
         main_cat_name = category_to_update.main_category.lower()
         print(f"Main category name: {main_cat_name}")  # Debug
         
-        # Get the budget ratios from plan settings
-        print(f"Plan budget_pref: {plan.budget_pref}")  # Debug
-        print(f"Plan monthly_income: {plan.monthly_income}")  # Debug
+        # Get budget ratios and calculate limits
+        print(f"DEBUG RATIO RETRIEVAL: plan.budget_pref = {plan.budget_pref}")
         budget_ratios = plan.budget_pref.get('ratios', {}) if plan.budget_pref else {}
-        print(f"Budget ratios: {budget_ratios}")  # Debug
+        print(f"DEBUG RATIO RETRIEVAL: budget_ratios = {budget_ratios}")
+        print(f"DEBUG RATIO RETRIEVAL: main_cat_name = {main_cat_name}")
         
         # Handle naming inconsistency: "investments" in categories vs "savings" in budget_pref
         ratio_key = main_cat_name
         if main_cat_name == 'investments':
             ratio_key = 'savings'
         
+        print(f"DEBUG RATIO RETRIEVAL: ratio_key = {ratio_key}")
+        
         try:
-            category_ratio = budget_ratios.get(ratio_key, 0) / 100.0
-            print(f"Category ratio for {main_cat_name} (using key '{ratio_key}'): {category_ratio}")  # Debug  # Debug
+            raw_ratio = budget_ratios.get(ratio_key, 0)
+            print(f"DEBUG RATIO RETRIEVAL: raw_ratio from budget_ratios.get('{ratio_key}', 0) = {raw_ratio}")
+            category_ratio = raw_ratio / 100.0
+            print(f"DEBUG RATIO RETRIEVAL: Final category_ratio for {main_cat_name} = {category_ratio}")
         except Exception as e:
             print(f"Error calculating category ratio: {e}")  # Debug
             raise        
