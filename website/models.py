@@ -78,6 +78,21 @@ class MonthlyRollover(db.Model):
     # Relationships
     plan = db.relationship('Plan', backref=db.backref('rollovers', lazy=True, cascade="all, delete-orphan"))
 
+# Additional Income model to track extra income added to specific months
+class AdditionalIncome(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    month = db.Column(db.Integer, nullable=False)
+    year = db.Column(db.Integer, nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    description = db.Column(db.String(200), nullable=False)
+    date_added = db.Column(db.DateTime(timezone=True), default=func.now())
+
+    # Foreign keys
+    plan_id = db.Column(db.Integer, db.ForeignKey('plan.id'), nullable=False)
+
+    # Relationships
+    plan = db.relationship('Plan', backref=db.backref('additional_incomes', lazy=True, cascade="all, delete-orphan"))
+
 # Transaction model
 class Payee(db.Model):
     id = db.Column(db.Integer, primary_key=True)

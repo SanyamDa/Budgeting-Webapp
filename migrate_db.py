@@ -58,6 +58,21 @@ def migrate_database():
         ''')
         print("BankAccount table created/verified")
         
+        # Create AdditionalIncome table if it doesn't exist
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS additional_income (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                month INTEGER NOT NULL,
+                year INTEGER NOT NULL,
+                amount REAL NOT NULL,
+                description VARCHAR(200) NOT NULL,
+                date_added DATETIME DEFAULT CURRENT_TIMESTAMP,
+                plan_id INTEGER NOT NULL,
+                FOREIGN KEY (plan_id) REFERENCES plan (id)
+            )
+        ''')
+        print("AdditionalIncome table created/verified")
+        
         conn.commit()
         print("Database migration completed successfully!")
         

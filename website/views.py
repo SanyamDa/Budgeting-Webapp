@@ -1,15 +1,14 @@
 from dateutil.relativedelta import relativedelta
 from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for
 from flask_login import login_required, current_user
-from .models import Note, User, Plan, BudgetCategory, Transaction, Payee, MonthlyBudget, MonthlyRollover
+from .models import Note, Plan, BudgetCategory, MonthlyBudget, Transaction, Payee, MonthlyRollover, AdditionalIncome
 from . import db
-
 import json
-from datetime import datetime, timedelta
-from sqlalchemy import func, extract, desc
-from sqlalchemy.orm.attributes import flag_modified
-import re
-import os
+from datetime import datetime, date
+import calendar
+from sqlalchemy import func, and_
+from collections import defaultdict
+import traceback
 from openai import OpenAI
 import base64
 from io import BytesIO
@@ -296,8 +295,14 @@ def home(year=None, month=None):
     # Available = assigned_in_month - activity
     available = assigned_in_month - activity
     
-    # Money Remaining to Assign = monthly_income - assigned_total (NOT including rollover)
-    money_remaining_to_assign = (plan.monthly_income + rollover_amount) - total_assigned
+    # Get additional income for this month
+    additional_income_total = db.session.query(func.sum(AdditionalIncome.amount)).filter_by(
+        plan_id=plan.id, month=month, year=year
+    ).scalar() or 0.0
+    
+    # Money Remaining to Assign = monthly_income + additional_income + rollover - assigned_total
+    # Additional income increases the total available money pool
+    money_remaining_to_assign = (plan.monthly_income + additional_income_total + rollover_amount) - total_assigned
     
     # Leftover for the month = money_remaining_to_assign + available
     leftover_for_month = money_remaining_to_assign + available
@@ -2229,5 +2234,88 @@ def update_budget_form():
     
     db.session.commit()
     
-    flash(f'Successfully assigned ${new_amount:.2f} to {category_to_update.name}.', 'success')
+    flash(f"Budget updated for {category_to_update.name}!", "success")
     return redirect(url_for('views.home'))
+
+@views.route('/add-income', methods=['POST'])
+@login_required
+def add_income():
+    """Add unexpected income and distribute it according to budget ratios"""
+    plan = current_user.active_plan
+    if not plan:
+        flash('No active plan found.', 'error')
+        return redirect(url_for('views.home'))
+    
+    amount = float(request.form.get('amount', 0))
+    description = request.form.get('description', '').strip()
+    month = int(request.form.get('month'))
+    year = int(request.form.get('year'))
+    
+    if amount <= 0:
+        flash('Amount must be greater than 0.', 'error')
+        return redirect(url_for('views.home'))
+    
+    if not description:
+        flash('Description is required.', 'error')
+        return redirect(url_for('views.home'))
+    
+    # Get budget ratios
+    budget_ratios = plan.budget_pref.get('ratios', {}) if plan.budget_pref else {}
+    needs_ratio = budget_ratios.get('needs', 50) / 100.0
+    wants_ratio = budget_ratios.get('wants', 30) / 100.0
+    savings_ratio = budget_ratios.get('savings', 20) / 100.0
+    
+    # Calculate distribution amounts
+    needs_amount = amount * needs_ratio
+    wants_amount = amount * wants_ratio
+    savings_amount = amount * savings_ratio
+    
+    # Get main categories for each type
+    needs_categories = [c for c in plan.categories if c.main_category.lower() == 'needs']
+    wants_categories = [c for c in plan.categories if c.main_category.lower() == 'wants']
+    investments_categories = [c for c in plan.categories if c.main_category.lower() == 'investments']
+    
+    # Distribute to categories (evenly within each main category)
+    def distribute_to_categories(categories, total_amount):
+        if not categories:
+            return
+        
+        amount_per_category = total_amount / len(categories)
+        
+        for category in categories:
+            # Get or create MonthlyBudget record
+            mb = MonthlyBudget.query.filter_by(
+                plan_id=plan.id,
+                category_id=category.id,
+                month=month,
+                year=year
+            ).first()
+            
+            if mb:
+                mb.assigned_amount += amount_per_category
+            else:
+                mb = MonthlyBudget(
+                    plan_id=plan.id,
+                    category_id=category.id,
+                    month=month,
+                    year=year,
+                    assigned_amount=amount_per_category,
+                    spent_amount=0
+                )
+                db.session.add(mb)
+    
+    # Record the additional income ONLY - don't distribute to categories
+    # This way it shows up in "Money Remaining to Assign" for user to allocate manually
+    additional_income = AdditionalIncome(
+        plan_id=plan.id,
+        month=month,
+        year=year,
+        amount=amount,
+        description=description
+    )
+    db.session.add(additional_income)
+    
+    db.session.commit()
+    
+    flash(f'฿{amount:.2f} from "{description}" has been added to your available money to assign!', 'success')
+    return redirect(url_for('views.home', month=month, year=year))
