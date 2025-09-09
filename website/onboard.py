@@ -14,7 +14,7 @@ def show_form():
         income  = float(request.form.get("income", 0) or 0)
         needs_p = float(request.form.get("needs", 0) or 0)
         wants_p = float(request.form.get("wants", 0) or 0)
-        save_p  = float(request.form.get("investments", 0) or 0)
+        save_p  = float(request.form.get("savings", 0) or 0)
 
         # -------- sub-category arrays --------
         needs_sub   = request.form.getlist("needsSub[]")
@@ -23,21 +23,17 @@ def show_form():
         plan_name   = request.form.get("plan_name", "").strip() or "My First Plan"
 
         # -------- Create new Plan object -------- 
-        print(f"DEBUG ONBOARDING: Creating plan with ratios - needs: {needs_p}, wants: {wants_p}, savings: {save_p}")
-        budget_pref_data = {
-            "ratios": {"needs": needs_p, "wants": wants_p, "savings": save_p},
-            "subcategories": {
-                "needs": needs_sub,
-                "wants": wants_sub,
-                "savings": saving_sub
-            }
-        }
-        print(f"DEBUG ONBOARDING: budget_pref_data = {budget_pref_data}")
-        
         new_plan = Plan(
             name=plan_name,
             monthly_income=income,
-            budget_pref=budget_pref_data,
+            budget_pref={
+                "ratios": {"needs": needs_p, "wants": wants_p, "savings": save_p},
+                "subcategories": {
+                    "needs": needs_sub,
+                    "wants": wants_sub,
+                    "savings": saving_sub
+                }
+            },
             user_id=current_user.id
         )
         db.session.add(new_plan)
@@ -67,11 +63,6 @@ def show_form():
             current_user.profile_complete = True
         
         db.session.commit()
-        
-        # Debug: Check what was actually saved
-        db.session.refresh(new_plan)
-        print(f"DEBUG ONBOARDING: After commit, plan.budget_pref = {new_plan.budget_pref}")
-        print(f"DEBUG ONBOARDING: Ratios saved = {new_plan.budget_pref.get('ratios', 'NOT FOUND')}")
 
         flash(f"New plan '{plan_name}' created successfully!", "success")
         return redirect(url_for("views.home"))
