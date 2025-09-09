@@ -1,16 +1,28 @@
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-# Python bytecode
+# Byte-compiled / cache
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# Local env & secrets
+# Local environment & secrets
 .env
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+bin/
+Include/
+Lib/
+Scripts/
+pyvenv.cfg
+lib/              # only if this is your venv, not part of your app code
 
 # SQLite and other local databases
 *.db
+website/database.db
 instance/
+
+# OS-specific
+.DS_Store
