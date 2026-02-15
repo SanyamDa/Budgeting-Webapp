@@ -68,4 +68,8 @@ def create_app():
     def health():
         return {"status": "ok"}, 200
 
+    with app.app_context():
+        from .models import User, Note, Plan, BudgetCategory, MonthlyBudget, Transaction, Payee, MonthlyRollover, AdditionalIncome
+        db.create_all()
+
     return app
