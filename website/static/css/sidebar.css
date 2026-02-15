@@ -42,10 +42,11 @@ body.with-sidebar{
   display: flex;
   align-items: center;
   gap: .75rem;
+  margin-left: -9px;
 }
 .sidebar-header .logo-img {
-  width: 36px;
-  height: 36px;
+  width: 54px;
+  height: 54px;
   object-fit: contain;
 }
 .sidebar-header .sidebar-text {
@@ -56,16 +57,23 @@ body.with-sidebar{
 .sidebar-header .email-white {
   font-size: .75rem;
   color: rgba(255,255,255,.85);
+  word-wrap: break-word;
+  word-break: break-all;
+  line-height: 1.2;
+  max-width: 200px;
 }
 /* Plan dropdown anchor */
 #planDropdown {
   color: #fff;
   text-decoration: none;
+  padding-right: 25px;
 }
 #planDropdown .toggle-arrow {
   color: rgba(255,255,255,.9);
   font-size: 1rem;
   transition: transform .3s;
+  position: absolute;
+  right: 0;
 }
 #planDropdown[aria-expanded="true"] .toggle-arrow {
   transform: rotate(180deg);
@@ -136,10 +144,11 @@ body.sidebar-collapsed #sidebar #sidebar-toggle i { transform: rotate(180deg); }
 
 /* Plan dropdown tweaks */
 #planDropdown::after { display: none; }
-#planDropdown { display: flex; align-items: center; justify-content: space-between; }
+#planDropdown { display: flex; align-items: center; justify-content: space-between; position: relative; }
 #planDropdown h5 {
   margin: 0;
   color: #fff; /* plan name in white */
+  flex: 1;
 }
 
 /* Plan dropdown menu */

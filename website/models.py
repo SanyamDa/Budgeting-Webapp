@@ -11,32 +11,32 @@ class Note(db.Model):
     date     = db.Column(db.DateTime(timezone=True), default=func.now())
     user_id  = db.Column(db.Integer, db.ForeignKey('user.id'))
 
-# New Plan model to store plan-specific data
-class Plan(db.Model):
-    id             = db.Column(db.Integer, primary_key=True)
-    name           = db.Column(db.String(100), nullable=False)
-    monthly_income = db.Column(db.Float)
-    budget_pref    = db.Column(JSON)  # e.g., {"needs": 50, "wants": 30, "savings": 20}
-    user_id        = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-
+# Base model class - demonstrates INHERITANCE from SQLAlchemy's declarative base
+class Plan(db.Model):  # Inheritance from SQLAlchemy's declarative base
+    id = db.Column(db.Integer, primary_key=True)  # Primary key
+    name = db.Column(db.String(100), nullable=False)  # Plan name
+    monthly_income = db.Column(db.Float)  # User's monthly income
+    budget_pref = db.Column(JSON)  # JSON storage for preferences
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Foreign key
 # Budget Category model
-class BudgetCategory(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
+class BudgetCategory(db.Model):  # Child model demonstrating relationships
+    id = db.Column(db.Integer, primary_key=True)  # Unique identifier
+    name = db.Column(db.String(100), nullable=False)  # Category name
     icon = db.Column(db.String(50), default='bx-category')
-    main_category = db.Column(db.String(50), nullable=False)  # 'needs', 'wants', 'bills', 'investments'
-    assigned_amount = db.Column(db.Float, default=0.0)
+    main_category = db.Column(db.String(50), nullable=False)  # Parent category
+    assigned_amount = db.Column(db.Float, default=0.0)  # Budget allocation
     spent_amount = db.Column(db.Float, default=0.0)
-    plan_id = db.Column(db.Integer, db.ForeignKey('plan.id'), nullable=False)
+    plan_id = db.Column(db.Integer, db.ForeignKey('plan.id'), nullable=False)  # Links to plan
     created_date = db.Column(db.DateTime(timezone=True), default=func.now())
     
     # Relationship
-    plan = db.relationship('Plan', backref=db.backref('categories', lazy=True, cascade="all, delete-orphan"))
+    plan = db.relationship('Plan', backref=db.backref('categories', lazy=True, cascade="all, delete-orphan")) 
+    # Polymorphic relationship
     transactions = db.relationship('Transaction', backref='category', lazy=True, cascade="all, delete-orphan")
     
-    @property
+    @property # Encapsulation - computed property
     def available_amount(self):
-        return self.assigned_amount - self.spent_amount
+        return self.assigned_amount - self.spent_amount # Real-time calculation
     
     @property
     def progress_percentage(self):

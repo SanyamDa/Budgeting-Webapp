@@ -1,19 +1,47 @@
-
-*.pyc
-
+# Python cache
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
 
+# Virtual environments
 .venv/
+venv/
+env/
+ENV/
+bin/
+include/
+Include/
+Lib/
+Scripts/
+pyvenv.cfg
+lib/
+site-packages/
+path/
 
+# Node
+node_modules/
+package-lock.json
+package.json
+
+# Local database files
+*.db
+*.db-*
+*.sqlite3
+website/*.db
+website/*.db.*
 website/database.db
 
+# env & secrets
 .env
+.env.*
 
+# OS/editor junk
+.DS_Store
+*.swp
 
-# generated
-*.pyc
-__pycache__/
-website/database.db
-
-*.pyc
-__pycache__/
+# Misc
+instance/
+*.egg-info/
+dist/
+build/

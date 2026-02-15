@@ -4,12 +4,36 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, login_required, logout_user
 from flask_mail import Message
 from .utils.forgot import generate_reset_token, verify_reset_token
-import os, random, time
+import os, random, time, re
 
 from . import db, oauth, mail
 from .models import User
 
 auth = Blueprint("auth", __name__) 
+
+# ── Password validation function ─────────────────────────────────
+def validate_password(password):
+    """
+    Validate password against security criteria:
+    - At least 8 characters
+    - At least 1 capital letter
+    - At least 1 special character
+    - At least 1 number
+    Returns tuple (is_valid, error_message)
+    """
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters long."
+    
+    if not re.search(r'[A-Z]', password):
+        return False, "Password must contain at least 1 capital letter."
+    
+    if not re.search(r'[0-9]', password):
+        return False, "Password must contain at least 1 number."
+    
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        return False, "Password must contain at least 1 special character (!@#$%^&*(),.?\":{}|<>)."
+    
+    return True, ""
 
 # ── Google OAuth client ──────────────────────────────────────────
 google = oauth.register(
@@ -25,7 +49,15 @@ google = oauth.register(
 @auth.route("/login/google")
 def google_login():
     session.clear()                               # keep this
-    redirect_uri = "https://api.sanyamdababy.hackclub.app/auth/callback"
+    
+    # Auto-detect the correct redirect URI based on current request
+    from flask import request
+    if request.host.startswith('localhost') or request.host.startswith('127.0.0.1'):
+        # Development - use localhost
+        redirect_uri = f"http://{request.host}/auth/callback"
+    else:
+        # Production - use your domain (when it's working)
+        redirect_uri = "https://api.sanyamdababy.hackclub.app/auth/callback"
 
     # tell Google: “make the user pick an account every time”
     return google.authorize_redirect(
@@ -149,9 +181,13 @@ def signup():
             flash("Name too short.", "error")
         elif pw1 != pw2:
             flash("Passwords don't match.", "error")
-        elif len(pw1) < 8:
-            flash("Password must be ≥ 8 characters.", "error")
         else:
+            # Validate password strength
+            is_valid, error_msg = validate_password(pw1)
+            if not is_valid:
+                flash(error_msg, "error")
+                return render_template("signup.html")
+            
             new_user = User(
                 email=email, first_name=fn, last_name=ln,
                 password=generate_password_hash(pw1, method="pbkdf2:sha256")
@@ -277,9 +313,13 @@ def reset_password(token):
         pw2 = request.form.get("password2")
         if pw1 != pw2:
             flash("Passwords don't match.", "error")
-        elif len(pw1) < 8:
-            flash("Password must be ≥ 8 characters.", "error")
         else:
+            # Validate password strength
+            is_valid, error_msg = validate_password(pw1)
+            if not is_valid:
+                flash(error_msg, "error")
+                return render_template("reset.html")
+            
             user.password = generate_password_hash(pw1, method="pbkdf2:sha256")
             db.session.commit()
             flash("Password updated — you can log in now.", "success")

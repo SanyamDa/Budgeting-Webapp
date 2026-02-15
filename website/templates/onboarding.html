@@ -33,7 +33,7 @@
       <form id="wizardForm" method="POST">
         <div class="wizard-step" data-valid="false">
           <h4 class="text-center mb-3">What’s your monthly budget / income?</h4>
-          <input type="number" min="0" step="100" name="income" class="form-control mb-3" placeholder="฿ e.g. 75000" required>
+          <input type="number" min="1" step="1" name="income" class="form-control mb-3" placeholder="฿ e.g. 75000" required>
         </div>
 
         <div class="wizard-step" data-valid="true">
@@ -49,8 +49,9 @@
           </p>
         </div>
 
-        <div class="wizard-step" data-valid="false">
+        <div class="wizard-step" data-valid="true">
           <h4 class="text-center mb-3">Choose your own ratios</h4>
+          <p class="small text-center mb-3" style="color:#e2e8f0;">Ratios must add up to 100%</p>
           <div class="row text-center">
             <div class="col-4">
               <label class="small">Needs %</label>
@@ -160,6 +161,13 @@
       if(box.children.length>=5) return;
       const name = prompt("Sub-category name?");
       if(!name) return;
+      
+      // Validate subcategory name - only letters and spaces allowed
+      if(!/^[a-zA-Z\s]+$/.test(name.trim())) {
+        alert("Subcategory names can only contain letters and spaces, no numbers or special characters.");
+        return;
+      }
+      
       const pill = document.createElement("span");
       pill.className="pill";
       pill.innerHTML=`<span>${name}
@@ -182,7 +190,15 @@
 
   /* init */
   steps[0].querySelector("input").addEventListener("input",
-    e=>{steps[0].dataset.valid = !!e.target.value; render();});
+    e=>{
+      const value = e.target.value;
+      const isValid = value && 
+                     !isNaN(value) && 
+                     parseFloat(value) > 0 && 
+                     Number.isInteger(parseFloat(value));
+      steps[0].dataset.valid = isValid;
+      render();
+    });
     const planStep  = steps.find(s => s.querySelector("input[name='plan_name']"));
     const planInput = planStep.querySelector("input");
     planInput.addEventListener("input", e=>{

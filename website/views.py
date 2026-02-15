@@ -3,10 +3,13 @@ from flask import Blueprint, render_template, request, flash, jsonify, redirect,
 from flask_login import login_required, current_user
 from .models import Note, Plan, BudgetCategory, MonthlyBudget, Transaction, Payee, MonthlyRollover, AdditionalIncome
 from . import db
+from .auth import validate_password
+from werkzeug.security import generate_password_hash
 import json
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import calendar
 from sqlalchemy import func, and_
+from sqlalchemy.orm.attributes import flag_modified
 from collections import defaultdict
 import traceback
 from openai import OpenAI
@@ -15,6 +18,7 @@ from io import BytesIO
 import random
 from PIL import Image
 import pillow_heif
+import re
 
 # Register HEIF opener with PIL
 pillow_heif.register_heif_opener()
@@ -110,6 +114,10 @@ def validate_transaction_data(amount, description, category_id, plan_id):
     
     if len(description) > 200:
         return False, "Transaction description must be less than 200 characters"
+    
+    # Validate description contains only letters, numbers, and spaces
+    if not re.match(r'^[a-zA-Z0-9\s]+$', description.strip()):
+        return False, "Transaction description can only contain letters, numbers, and spaces"
     
     # Category validation
     if not category_id:
@@ -243,7 +251,23 @@ def home(year=None, month=None):
             rollover_amount = 0.0
 
     # --- Budget Processing for Display Month ---
-    categories = BudgetCategory.query.filter_by(plan_id=plan.id).all()
+    # Get all BudgetCategory records, but filter to only show ones that exist in plan preferences
+    all_categories = BudgetCategory.query.filter_by(plan_id=plan.id).all()
+    
+    # Filter categories to only include those that exist in plan preferences
+    categories = []
+    if plan.budget_pref and 'subcategories' in plan.budget_pref:
+        for cat in all_categories:
+            # Handle naming inconsistency: "investments" in database vs "savings" in plan preferences
+            pref_category_key = 'savings' if cat.main_category == 'investments' else cat.main_category
+            
+            # Check if this category exists in plan preferences
+            if (pref_category_key in plan.budget_pref['subcategories'] and 
+                cat.name in plan.budget_pref['subcategories'][pref_category_key]):
+                categories.append(cat)
+    else:
+        categories = all_categories  # Fallback if no preferences set
+    
     monthly_budgets_map = {}
     for cat in categories:
         mb = MonthlyBudget.query.filter_by(plan_id=plan.id, category_id=cat.id, month=month, year=year).first()
@@ -462,24 +486,20 @@ def update_category_amount():
         main_cat_name = category_to_update.main_category.lower()
         print(f"Main category name: {main_cat_name}")  # Debug
         
-        # Get budget ratios and calculate limits
-        print(f"DEBUG RATIO RETRIEVAL: plan.budget_pref = {plan.budget_pref}")
+        # Get the budget ratios from plan settings
+        print(f"Plan budget_pref: {plan.budget_pref}")  # Debug
+        print(f"Plan monthly_income: {plan.monthly_income}")  # Debug
         budget_ratios = plan.budget_pref.get('ratios', {}) if plan.budget_pref else {}
-        print(f"DEBUG RATIO RETRIEVAL: budget_ratios = {budget_ratios}")
-        print(f"DEBUG RATIO RETRIEVAL: main_cat_name = {main_cat_name}")
+        print(f"Budget ratios: {budget_ratios}")  # Debug
         
         # Handle naming inconsistency: "investments" in categories vs "savings" in budget_pref
         ratio_key = main_cat_name
         if main_cat_name == 'investments':
             ratio_key = 'savings'
         
-        print(f"DEBUG RATIO RETRIEVAL: ratio_key = {ratio_key}")
-        
         try:
-            raw_ratio = budget_ratios.get(ratio_key, 0)
-            print(f"DEBUG RATIO RETRIEVAL: raw_ratio from budget_ratios.get('{ratio_key}', 0) = {raw_ratio}")
-            category_ratio = raw_ratio / 100.0
-            print(f"DEBUG RATIO RETRIEVAL: Final category_ratio for {main_cat_name} = {category_ratio}")
+            category_ratio = budget_ratios.get(ratio_key, 0) / 100.0
+            print(f"Category ratio for {main_cat_name} (using key '{ratio_key}'): {category_ratio}")  # Debug  # Debug
         except Exception as e:
             print(f"Error calculating category ratio: {e}")  # Debug
             raise        
@@ -1299,6 +1319,125 @@ def receipt_ai():
     return render_template('receipt_ai.html', categories=categories, ai_transactions=ai_transactions)
 
 
+@views.route('/api/test_openai', methods=['GET'])
+@login_required
+def test_openai_api():
+    """Test OpenAI API connection and check for credits/quota issues"""
+    try:
+        import os
+        from openai import OpenAI
+        
+        # Check if API key exists
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            return jsonify({
+                'success': False, 
+                'error': 'No OpenAI API key found in environment variables',
+                'suggestion': 'Set OPENAI_API_KEY environment variable'
+            })
+        
+        # Test with a simple API call
+        client = OpenAI(api_key=api_key)
+        
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": "Say 'API test successful' in exactly those words."}],
+            max_tokens=10,
+            temperature=0
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'OpenAI API is working correctly',
+            'response': response.choices[0].message.content,
+            'model_used': response.model,
+            'tokens_used': response.usage.total_tokens if hasattr(response, 'usage') else 'Unknown'
+        })
+        
+    except Exception as e:
+        error_message = str(e)
+        
+        # Check for common error types
+        if 'insufficient_quota' in error_message.lower() or 'quota' in error_message.lower():
+            return jsonify({
+                'success': False,
+                'error': 'OpenAI API quota exceeded - you\'ve run out of credits',
+                'suggestion': 'Add credits to your OpenAI account at https://platform.openai.com/account/billing',
+                'raw_error': error_message
+            })
+        elif 'invalid_api_key' in error_message.lower() or 'unauthorized' in error_message.lower():
+            return jsonify({
+                'success': False,
+                'error': 'Invalid OpenAI API key',
+                'suggestion': 'Check your API key at https://platform.openai.com/api-keys',
+                'raw_error': error_message
+            })
+        elif 'rate_limit' in error_message.lower():
+            return jsonify({
+                'success': False,
+                'error': 'OpenAI API rate limit exceeded',
+                'suggestion': 'Wait a moment and try again, or upgrade your OpenAI plan',
+                'raw_error': error_message
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'OpenAI API error: {error_message}',
+                'suggestion': 'Check the raw error for more details',
+                'raw_error': error_message
+            })
+
+
+@views.route('/api/cleanup_subcategories', methods=['POST'])
+@login_required
+def cleanup_orphaned_subcategories():
+    """Clean up BudgetCategory records that exist in database but not in plan preferences"""
+    try:
+        plan = current_user.active_plan
+        if not plan or not plan.budget_pref or 'subcategories' not in plan.budget_pref:
+            return jsonify({'success': False, 'message': 'No plan or subcategories found'})
+        
+        # Get all subcategories that should exist according to plan preferences
+        valid_subcategories = set()
+        for main_category, subcats in plan.budget_pref['subcategories'].items():
+            for subcat in subcats:
+                valid_subcategories.add((main_category, subcat))
+        
+        # Find all BudgetCategory records for this plan
+        all_budget_categories = BudgetCategory.query.filter_by(plan_id=plan.id).all()
+        
+        orphaned_categories = []
+        for category in all_budget_categories:
+            category_key = (category.main_category, category.name)
+            if category_key not in valid_subcategories:
+                orphaned_categories.append(category)
+        
+        # Delete orphaned categories and their related data
+        deleted_count = 0
+        for category in orphaned_categories:
+            # Delete related MonthlyBudget records
+            MonthlyBudget.query.filter_by(category_id=category.id).delete()
+            
+            # Delete related Transaction records (or reassign them if preferred)
+            Transaction.query.filter_by(category_id=category.id).delete()
+            
+            # Delete the BudgetCategory itself
+            db.session.delete(category)
+            deleted_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Cleaned up {deleted_count} orphaned subcategories',
+            'deleted_categories': [f"{cat.main_category} - {cat.name}" for cat in orphaned_categories]
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error cleaning up subcategories: {str(e)}'})
+
+
 @views.route('/api/receipt_ai/create_transaction', methods=['POST'])
 @login_required
 def create_receipt_transaction():
@@ -1447,6 +1586,7 @@ def analyze_receipt_image(image_data):
     """Analyze receipt image using OpenAI Vision API to extract real merchant, amount, and date"""
     
     try:
+        import os  # Add missing import
         # Initialize OpenAI client with API key from environment
         client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         
@@ -1595,8 +1735,18 @@ def analyze_receipt_image(image_data):
             print(f"DEBUG: OpenAI API call successful")
             
         except Exception as openai_error:
+            error_message = str(openai_error)
             print(f"DEBUG: OpenAI API call failed: {type(openai_error).__name__}: {openai_error}")
-            raise Exception(f"OpenAI Vision API error: {str(openai_error)}")
+            
+            # Check for specific error types and provide helpful messages
+            if 'insufficient_quota' in error_message.lower() or 'quota' in error_message.lower():
+                raise Exception(f"OpenAI API quota exceeded - you've run out of credits. Add credits at https://platform.openai.com/account/billing")
+            elif 'invalid_api_key' in error_message.lower() or 'unauthorized' in error_message.lower():
+                raise Exception(f"Invalid OpenAI API key. Check your API key at https://platform.openai.com/api-keys")
+            elif 'rate_limit' in error_message.lower():
+                raise Exception(f"OpenAI API rate limit exceeded. Wait a moment and try again, or upgrade your plan")
+            else:
+                raise Exception(f"OpenAI Vision API error: {str(openai_error)}")
         
         # Parse the AI response
         ai_response = response.choices[0].message.content.strip()
@@ -1906,6 +2056,15 @@ def add_category():
         flash("Category name must be less than 50 characters.", 'error')
         return redirect(url_for('views.home'))
     
+    # Validate category name contains only letters and numbers, and must contain at least one letter
+    if not re.match(r'^[a-zA-Z0-9\s]+$', category_name):
+        flash("Category name can only contain letters, numbers, and spaces.", 'error')
+        return redirect(url_for('views.home'))
+    
+    if not re.search(r'[a-zA-Z]', category_name):
+        flash("Category name must contain at least one letter.", 'error')
+        return redirect(url_for('views.home'))
+    
     # Check if category already exists (case-insensitive)
     existing_category = BudgetCategory.query.filter(
         func.lower(BudgetCategory.name) == func.lower(category_name),
@@ -1980,13 +2139,13 @@ def plan_settings():
 
         # Check which form was submitted
         if 'update_plan_name' in request.form:
-            new_name = request.form.get('plan_name')
-            if new_name:
+            new_name = request.form.get('plan_name', '').strip()
+            if not new_name:
+                flash("Plan name cannot be empty.", 'error')
+            else:
                 plan.name = new_name
                 db.session.commit()
                 flash("Plan name updated successfully!", 'success')
-            else:
-                flash("Plan name cannot be empty.", 'error')
 
         elif 'update_ratios' in request.form:
             try:
@@ -2029,26 +2188,80 @@ def plan_settings():
         elif 'add_subcategory' in request.form:
             category = request.form.get('category')
             new_subcat = request.form.get('subcategory_name', '').strip()
-            if category and new_subcat:
-                if new_subcat not in plan.budget_pref['subcategories'][category]:
-                    plan.budget_pref['subcategories'][category].append(new_subcat)
-                    flag_modified(plan, 'budget_pref')
-                    db.session.commit()
-                    flash(f"Added subcategory '{new_subcat}'.", 'success')
-                else:
-                    flash(f"Subcategory '{new_subcat}' already exists.", 'warning')
-            else:
+            
+            if not category or not new_subcat:
                 flash("Subcategory name cannot be empty.", 'error')
+            elif len(new_subcat) < 2:
+                flash("Subcategory name must be at least 2 characters long.", 'error')
+            elif len(new_subcat) > 50:
+                flash("Subcategory name must be less than 50 characters.", 'error')
+            elif not re.match(r'^[a-zA-Z0-9\s]+$', new_subcat):
+                flash("Subcategory name can only contain letters, numbers, and spaces.", 'error')
+            elif not re.search(r'[a-zA-Z]', new_subcat):
+                flash("Subcategory name must contain at least one letter.", 'error')
+            elif new_subcat in plan.budget_pref['subcategories'][category]:
+                flash(f"Subcategory '{new_subcat}' already exists.", 'warning')
+            else:
+                # Check if BudgetCategory already exists in database
+                # Handle naming inconsistency: "savings" in plan preferences vs "investments" in database
+                db_main_category = 'investments' if category == 'savings' else category
+                
+                existing_budget_category = BudgetCategory.query.filter_by(
+                    plan_id=plan.id,
+                    name=new_subcat,
+                    main_category=db_main_category
+                ).first()
+                
+                if existing_budget_category:
+                    flash(f"Subcategory '{new_subcat}' already exists in database.", 'warning')
+                    return redirect(url_for('views.plan_settings'))
+                # Add to plan preferences
+                plan.budget_pref['subcategories'][category].append(new_subcat)
+                flag_modified(plan, 'budget_pref')
+                
+                # Also create the actual BudgetCategory record in database
+                # Handle naming inconsistency: "savings" in plan preferences vs "investments" in database
+                db_main_category = 'investments' if category == 'savings' else category
+                
+                new_budget_category = BudgetCategory(
+                    name=new_subcat,
+                    main_category=db_main_category,
+                    plan_id=plan.id,
+                    assigned_amount=0.0
+                )
+                db.session.add(new_budget_category)
+                
+                db.session.commit()
+                flash(f"Added subcategory '{new_subcat}'.", 'success')
 
         elif 'delete_subcategory' in request.form:
             category = request.form.get('category')
             subcat_to_delete = request.form.get('subcategory_name')
             if category and subcat_to_delete:
                 if subcat_to_delete in plan.budget_pref['subcategories'][category]:
+                    # Remove from plan preferences
                     plan.budget_pref['subcategories'][category].remove(subcat_to_delete)
                     flag_modified(plan, 'budget_pref')
+                    
+                    # Also delete the actual BudgetCategory record from database
+                    budget_category = BudgetCategory.query.filter_by(
+                        plan_id=plan.id,
+                        name=subcat_to_delete,
+                        main_category=category
+                    ).first()
+                    
+                    if budget_category:
+                        # Delete related MonthlyBudget records first
+                        MonthlyBudget.query.filter_by(category_id=budget_category.id).delete()
+                        
+                        # Delete related Transaction records (or you might want to reassign them)
+                        Transaction.query.filter_by(category_id=budget_category.id).delete()
+                        
+                        # Delete the BudgetCategory itself
+                        db.session.delete(budget_category)
+                    
                     db.session.commit()
-                    flash(f"Removed subcategory '{subcat_to_delete}'.", 'success')
+                    flash(f"Removed subcategory '{subcat_to_delete}' and all associated data.", 'success')
         
         return redirect(url_for('views.plan_settings'))
 
@@ -2111,12 +2324,17 @@ def set_password():
     """Sets or updates the user's password."""
     password = request.form.get('password')
 
-    if not password or len(password) < 7:
-        flash('Password must be at least 7 characters long.', category='error')
+    if not password:
+        flash('Password is required.', category='error')
     else:
-        current_user.password = generate_password_hash(password, method='pbkdf2:sha256')
-        db.session.commit()
-        flash('Password updated successfully!', category='success')
+        # Validate password strength
+        is_valid, error_msg = validate_password(password)
+        if not is_valid:
+            flash(error_msg, category='error')
+        else:
+            current_user.password = generate_password_hash(password, method='pbkdf2:sha256')
+            db.session.commit()
+            flash('Password updated successfully!', category='success')
 
     return redirect(url_for('views.account_settings'))
 
@@ -2257,6 +2475,11 @@ def add_income():
     
     if not description:
         flash('Description is required.', 'error')
+        return redirect(url_for('views.home'))
+    
+    # Validate description contains only letters and spaces
+    if not re.match(r'^[a-zA-Z\s]+$', description):
+        flash('Description can only contain letters and spaces.', 'error')
         return redirect(url_for('views.home'))
     
     # Get budget ratios
