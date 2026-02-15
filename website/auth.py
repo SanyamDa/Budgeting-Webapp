@@ -68,8 +68,9 @@ def google_login():
 def google_callback():
     try:
         token = google.authorize_access_token()
-    except Exception:
+    except Exception as e:
         current_app.logger.exception("OAuth callback failed")
+        print(f"DEBUG OAuth error: {type(e).__name__}: {e}")
         flash("Google login failed. Try again.", "error")
         return redirect(url_for("auth.login"))
 

@@ -27,6 +27,12 @@ def create_app():
     # ── App config ─────────────────────────────
     app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "dev")
 
+    # Production session settings for Render (HTTPS)
+    if os.environ.get('RENDER'):
+        app.config["SESSION_COOKIE_SECURE"] = True
+        app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+        app.config["PREFERRED_URL_SCHEME"] = "https"
+
     db_path = pathlib.Path(__file__).with_name(DB_NAME)
     print("USING DB FILE:", db_path.resolve())
     app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
