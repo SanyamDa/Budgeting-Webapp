@@ -50,14 +50,12 @@ google = oauth.register(
 def google_login():
     session.clear()                               # keep this
     
-    # Auto-detect the correct redirect URI based on current request
-    from flask import request
-    if request.host.startswith('localhost') or request.host.startswith('127.0.0.1'):
-        # Development - use localhost
-        redirect_uri = f"http://{request.host}/auth/callback"
-    else:
-        # Production - use your domain (when it's working)
+    # Detect environment: Render sets RENDER=true automatically
+    if os.environ.get('RENDER'):
         redirect_uri = "https://budgeting-webapp.onrender.com/auth/callback"
+    else:
+        from flask import request
+        redirect_uri = f"http://{request.host}/auth/callback"
 
     # tell Google: “make the user pick an account every time”
     return google.authorize_redirect(

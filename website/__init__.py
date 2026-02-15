@@ -8,6 +8,7 @@ from flask_mail import Mail
 from flask_migrate import Migrate  
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
+from werkzeug.middleware.proxy_fix import ProxyFix
 import os, pathlib
 
 load_dotenv()
@@ -20,7 +21,8 @@ mail  = Mail()
 DB_NAME = "database.db"                       # will sit inside /website
 
 def create_app():
-    app = Flask(__name__) 
+    app = Flask(__name__)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     # ── App config ─────────────────────────────
     app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "dev")
