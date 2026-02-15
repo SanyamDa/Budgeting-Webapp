@@ -57,7 +57,7 @@ def google_login():
         redirect_uri = f"http://{request.host}/auth/callback"
     else:
         # Production - use your domain (when it's working)
-        redirect_uri = "https://api.sanyamdababy.hackclub.app/auth/callback"
+        redirect_uri = "https://budgeting-webapp.onrender.com/auth/callback"
 
     # tell Google: “make the user pick an account every time”
     return google.authorize_redirect(
